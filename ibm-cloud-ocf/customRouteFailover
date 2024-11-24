@@ -1,11 +1,22 @@
 #!/bin/bash
 
+  echo "here 1"  >> /tmp/start.txt
+: ${OCF_FUNCTIONS:="${OCF_ROOT}/resource.d/heartbeat/.ocf-shellfuncs"}
+. "${OCF_FUNCTIONS}"
+
+  echo "here 2"  >> /tmp/start.txt
 param=$1
 
+## Defaults
+#
+OCF_IBM_auth_type_default="key"
 instance_identity_token=$(curl -X PUT "http://169.254.169.254/instance_identity/v1/token?version=2022-03-08" -H "Metadata-Flavor: ibm" -d '{ "expires_in": 3600 }' | jq -r .access_token)
-instance_primary_ip=$(curl -X GET "http://169.254.169.254/metadata/v1/instance/network_interfaces?version=2022-05-24" -H "Authorization: Bearer $instance_identity_token" | jq -r .network_interfaces[0].primary_ipv4_address)
-FIP_IP=$(curl -X GET "http://169.254.169.254/metadata/v1/instance/network_interfaces?version=2022-05-24" -H "Authorization: Bearer $instance_identity_token" | jq -r .network_interfaces[0].floating_ips[0].address)
+#export instance_primary_ip=$(curl -X GET "http://169.254.169.254/metadata/v1/instance/network_interfaces?version=2022-05-24" -H "Authorization: Bearer $instance_identity_token" | jq -r .network_interfaces[0].primary_ipv4_address)
+#FIP_IP=$(curl -X GET "http://169.254.169.254/metadata/v1/instance/network_interfaces?version=2022-05-24" -H "Authorization: Bearer $instance_identity_token" | jq -r .network_interfaces[0].floating_ips[0].address)
+export VPC_ID=$(curl -X GET "http://169.254.169.254/metadata/v1/instance?version=2022-05-24" -H "Authorization: Bearer $instance_identity_token" | jq -r .vpc.id) 
+export VSI_LOCAL_AZ=$(curl -X GET "http://169.254.169.254/metadata/v1/instance?version=2022-05-24" -H "Authorization: Bearer $instance_identity_token" | jq -r .zone.name) 
 
+  echo "here 3"  >> /tmp/start.txt
 meta_data() {
   cat <<END
 <?xml version="1.0"?>
@@ -16,6 +27,42 @@ meta_data() {
 Custom Route failover ocf  via the IBM Cloud API</longdesc>
   <shortdesc lang="en">VIP HA using Custom route IBM Cloud API</shortdesc>
 <parameters>
+<parameter name="auth_type">
+<longdesc lang="en">
+Authentication type "key" for AccessKey
+</longdesc>
+<shortdesc lang="en">Authentication type</shortdesc>
+<content type="string" default="${OCF_IBM_auth_type_default}" />
+</parameter>
+<parameter name="api_key" unique="1">
+<longdesc lang="en">
+IBM Cloud APi key
+</longdesc>
+<shortdesc lang="en">API key</shortdesc>
+<content type="string" default="" />
+</parameter>
+<parameter name="vpc_url" unique="1">
+<longdesc lang="en">
+IBM Cloud Public VPC URL for your region or a VPE URL for IBM Cloud VPC 
+</longdesc>
+<shortdesc lang="en">API key</shortdesc>
+<content type="string" default="" />
+</parameter>
+<parameter name="ext_ip_1" unique="1" required="1">
+<longdesc lang="en">
+Ip address for instace 1 
+</longdesc>
+<shortdesc lang="en">predefined private ip address for ec2 instance</shortdesc>
+<content type="string" default="" />
+</parameter>
+<parameter name="ext_ip_2" unique="1" required="1">
+<longdesc lang="en">
+Ip address for instace 2 
+</longdesc>
+<shortdesc lang="en">predefined private ip address for ec2 instance</shortdesc>
+<content type="string" default="" />
+</parameter>
+
 </parameters>
   <actions>
     <action name="start"        timeout="20" />
@@ -28,29 +75,64 @@ Custom Route failover ocf  via the IBM Cloud API</longdesc>
 END
 }
 
+get_params()
+{
+  echo "here 4"  >> /tmp/start.txt
+	if [ -n "$OCF_RESKEY_api_key" ]; then
+		export API_KEY=${OCF_RESKEY_api_key}
+	else
+		ocf_log info "You need to specify api_key"
+  		echo "NO API KEY ---"  >> /tmp/start.txt
+	fi
+	if [ -n "$OCF_RESKEY_vpc_url" ]; then
+		export VPC_URL=${OCF_RESKEY_vpc_url}
+	fi
+	if [ -n "$OCF_RESKEY_ext_ip_1" ]; then
+		export EXT_IP_1=${OCF_RESKEY_ext_ip_1}
+	fi
+	if [ -n "$OCF_RESKEY_ext_ip_2" ]; then
+		export EXT_IP_2=${OCF_RESKEY_ext_ip_2}
+	fi
+}
+
+
 if [ "start" == "$param" ] ; then
-  python /root/ibm-cloud-pacemaker-plugin/scripts/ibm-cloud-pacemaker-fail-over.py
-  exit 0
+  ocf_log info "Calling start fail over  (${OCF_RESKEY_API_KEY})"
+  echo "start"  >> /tmp/start.txt
+  get_params
+  python3 /root/ibm-cloud-pacemaker-plugin/scripts/ibm-cloud-pacemaker-fail-over.py SET
+  exit $OCF_SUCCESS
 elif [ "stop" == "$param" ] ; then
-  exit 0;
+  exit $OCF_SUCCESS
 elif [ "status" == "$param" ] ; then
-  if $HAS_FLOATING_IP ; then
-    echo "Has Floating IP"
+    
+    echo "VPC_ID= "
+    echo $VPC_ID
+    echo "active passive ips "
+    echo $EXT_IP_1 
+    echo $EXT_IP_2 
     exit 0
-  else
-    echo "Does Not Have Floating IP"
-    exit 1
-  fi
 elif [ "monitor" == "$param" ] ; then
-  if $HAS_FLOATING_IP ; then
-    exit 0
-  else
-    exit 7
+  get_params
+  echo "monitor: ${API_KEY},${EXT_IP_1},${EXT_IP_2},${VPC_URL},  "  >> /tmp/start.txt
+  ocf_log info "Calling monitor IIIII  (${API_KEY})"
+  active_ip=$(python3 /root/ibm-cloud-pacemaker-plugin/scripts/ibm-cloud-pacemaker-fail-over.py GET)
+  python3 /root/ibm-cloud-pacemaker-plugin/scripts/ibm-cloud-pacemaker-fail-over.py GET >> /tmp/start.txt
+  echo " active_ip = $active_ip"  >> /tmp/start.txt
+  cmd="ip a"
+  ocf_log info "executing command: $cmd active_ip: $active_ip"
+  RESULT=$($cmd | grep "$active_ip") 
+  if [ -z "$RESULT" ]; then
+  	  ocf_log info "Passive return $OCF_NOT_RUNNING"
+  	  exit $OCF_NOT_RUNNING
   fi
+  ocf_log info "Active return $OCF_SUCCESS"
+  echo "monitor OCF_SUCCESS"  >> /tmp/start.txt
+  exit $OCF_SUCCESS
 elif [ "meta-data" == "$param" ] ; then
   meta_data
   exit 0
-else
-  echo "no such command $param"
-  exit 1;
 fi
+rc=$?
+ocf_log info "${OCF_RESOURCE_INSTANCE} $__OCF_ACTION : $rc"
+exit $rc
