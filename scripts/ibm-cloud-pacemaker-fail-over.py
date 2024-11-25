@@ -48,7 +48,7 @@ class HAFailOver(object):
     ext_ip_1 = ''
     ext_ip_2 = ''
     DEBUG = False 
-    #DEBUG = True 
+    DEBUG = True 
     service = None
     
     def __init__(self):
@@ -111,8 +111,6 @@ class HAFailOver(object):
                 self.vpc_id = env[self.VPC_ID]
                 self.vpc_id = env[self.VPC_ID]
                 self.logger(self.VPC_ID + ": " + self.vpc_id)
-            else:
-                self.parameterException(self.VPC_ID)
             
             if self.VPC_URL in env:
                 self.vpc_url = env[self.VPC_URL]
@@ -130,14 +128,10 @@ class HAFailOver(object):
             if self.EXT_IP_1 in env:
                 self.ext_ip_1 = env[self.EXT_IP_1]
                 self.logger("External IP 1: " + self.ext_ip_1)
-            else:
-                self.parameterException(self.EXT_IP_1)
 
             if self.EXT_IP_2 in env:
                 self.ext_ip_2 = env[self.EXT_IP_2]
                 self.logger("External IP 1: " + self.ext_ip_2)
-            else:
-                self.parameterException(self.EXT_IP_2)
 
         except Exception as e:
             self.logger(e)   

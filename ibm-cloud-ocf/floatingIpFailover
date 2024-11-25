@@ -60,6 +60,14 @@ IBM Cloud API key to be used
 <shortdesc lang="en">IBM Cloud API key</shortdesc>
 <content type="string" default=""/>
 </parameter>
+<parameter name="vpc_url">
+<longdesc lang="en">
+IBM Cloud region VPC URL to use
+</longdesc>
+<shortdesc lang="en">IBM Cloud VPC API URL</shortdesc>
+<content type="string" default=""/>
+</parameter>
+
 
 <parameter name="vni_id_1">
 <longdesc lang="en">
@@ -114,11 +122,18 @@ exit $OCF_SUCCESS
 get_params()
 {
 	if [ -n "$OCF_RESKEY_api_key" ]; then
-		export API_KEY=${OCF_RESKEY_ap_key}
+		export API_KEY=${OCF_RESKEY_api_key}
 	else
 		ocf_log info "You need to specify teh api key to be used"
 		return $OCF_ERR_ARGS
 	fi
+	if [ -n "$OCF_RESKEY_vpc_url" ]; then
+		export VPC_URL=${OCF_RESKEY_vpc_url}
+	else
+		ocf_log info "You need to specify vpc url to be used"
+		return $OCF_ERR_ARGS
+	fi
+
 	if [ -n "$OCF_RESKEY_fip_id" ]; then
 		fip_id=${OCF_RESKEY_fip_id}
 	else
@@ -143,7 +158,7 @@ get_params()
 	local_vni_id=$(curl -X GET "http://169.254.169.254/metadata/v1/instance/network_attachments?version=2024-11-19" -H "Authorization: Bearer $instance_identity_token" | jq -r .network_attachments[0].virtual_network_interface.id)
 	FIP_IP=$(curl -X GET "http://169.254.169.254/metadata/v1/instance/network_interfaces?version=2022-05-24" -H "Authorization: Bearer $instance_identity_token" | jq -r .network_interfaces[0].floating_ips[0].address)
 	remote_vni_id=""
-	ocf_log info ">>>>>>>>>> local_vni :$local_vni_id:$vni_id_1:$vni_id_2::$OCF_SUCCESS"
+	ocf_log info ">>>>>>>>>> API_KEY:$API_KEY:local_vni :$local_vni_id:$vni_id_1:$vni_id_2::$OCF_SUCCESS"
 	if [ "$local_vni_id" = "$vni_id_1" ]; then 
 		remote_vni_id=$vni_id_2
 	fi
@@ -172,6 +187,7 @@ fip_start()
 {
 	ocf_log info ">>>>>>>>>> fip_start: :$remote_vni_id:$local_vni_id:$fip_id:  $OCF_SUCCESS"
 	ocf_log info "python3 /root/ibm-cloud-pacemaker-plugin/scripts/ibm-cloud-pacemaker-fail-over.py FIP remove $remote_vni_id $fip_id"
+	ocf_log info "python3 /root/ibm-cloud-pacemaker-plugin/scripts/ibm-cloud-pacemaker-fail-over.py FIP add $remote_vni_id $fip_id"
   	python3 /root/ibm-cloud-pacemaker-plugin/scripts/ibm-cloud-pacemaker-fail-over.py FIP remove $remote_vni_id $fip_id 
   	python3 /root/ibm-cloud-pacemaker-plugin/scripts/ibm-cloud-pacemaker-fail-over.py FIP add  $local_vni_id $fip_id 
 	exit $OCF_SUCCESS
