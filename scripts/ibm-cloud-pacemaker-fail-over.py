@@ -142,25 +142,27 @@ class HAFailOver(object):
         except Exception as e:
             self.logger(e)   
 
-        def update_vpc_fip(self, cmd, vni_id, fip_id):
+    def update_vpc_fip(self, cmd, vni_id, fip_id):
             self.logger("Calling update vpc routing table route method VIP.")    
             self.logger("VPC ID: " + self.vpc_id) 
             self.logger("VPC URL: " + self.vpc_url) 
             self.logger("VPC self.ext_ip_1: " + self.ext_ip_1) 
             self.logger("VPC self.ext_ip_2: " + self.ext_ip_2) 
             self.logger("VPC self.api_key: " + self.apikey)
+            self.logger("cmd: " + cmd)
             list_tables = ''
             authenticator = IAMAuthenticator(self.apikey, url='https://iam.cloud.ibm.com')
             self.service = VpcV1(authenticator=authenticator)
             self.service.set_service_url(self.vpc_url)
+            ret = ""
             try:
                 if cmd == "remove":
-                    remove_fip = service.remove_network_interface_floating_ip(vni_id,fip_id).get_result()
+                    ret = self.service.remove_network_interface_floating_ip(vni_id,fip_id).get_result()
                 if cmd == "add":
-                    add_fip = service.add_network_interface_floating_ip(vni_id,fip_id).get_result()
+                    ret = self.service.add_network_interface_floating_ip(vni_id,fip_id).get_result()
             except Exception as e:
                 print(e)
-               
+            print (ret)   
             return True
 
     def update_vpc_routing_table_route(self,cmd):   

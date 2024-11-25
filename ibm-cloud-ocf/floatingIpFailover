@@ -27,9 +27,8 @@
 #
 ##########################################################################
 # Initialization:
-
-: ${OCF_FUNCTIONS_DIR=${OCF_ROOT}/resource.d/heartbeat}
-. ${OCF_FUNCTIONS_DIR}/.ocf-shellfuncs
+: ${OCF_FUNCTIONS:="${OCF_ROOT}/resource.d/heartbeat/.ocf-shellfuncs"}
+. "${OCF_FUNCTIONS}"
 
 USAGE="Usage: $0 {start|stop|monitor|validate-all|meta-data}";
 
@@ -62,14 +61,14 @@ IBM Cloud API key to be used
 <content type="string" default=""/>
 </parameter>
 
-<parameter name="vni_1_id">
+<parameter name="vni_id_1">
 <longdesc lang="en">
 IBM Cloud Virtual Network Interafce ID to be used  
 </longdesc>
 <shortdesc lang="en">IBM Cloud VNI 1 ID</shortdesc>
 <content type="string" default=""/>
 </parameter>
-<parameter name="vni_2_id">
+<parameter name="vni_id_2">
 <longdesc lang="en">
 IBM Cloud Virtual Network Interafce ID to be used  
 </longdesc>
@@ -83,14 +82,14 @@ IBM Cloud Floating Ip ID to be used
 <shortdesc lang="en">IBM Cloud FIP ID</shortdesc>
 <content type="string" default=""/>
 </parameter>
-<parameter name="vni_1_id">
+<parameter name="vni_id_1">
 <longdesc lang="en">
 IBM Cloud VNI 1 ID to be used  
 </longdesc>
 <shortdesc lang="en">IBM Cloud VNI 1  ID</shortdesc>
 <content type="string" default=""/>
 </parameter>
-<parameter name="vni_2_id">
+<parameter name="vni_id_2">
 <longdesc lang="en">
 IBM Cloud VNI 2 ID to be used  
 </longdesc>
@@ -126,14 +125,14 @@ get_params()
 		ocf_log info "You need to specify the fip id to be used"
 		return $OCF_ERR_ARGS
 	fi
-	if [ -n "$OCF_RESKEY_vni_1_id" ]; then
-		vni_1_id=${OCF_RESKEY_vni_1_id}
+	if [ -n "$OCF_RESKEY_vni_id_1" ]; then
+		vni_id_1=${OCF_RESKEY_vni_id_1}
 	else
 		ocf_log info "You need to specify the vni 1  id to be used"
 		return $OCF_ERR_ARGS
 	fi
-	if [ -n "$OCF_RESKEY_vni_2_id" ]; then
-		vni_2_id=${OCF_RESKEY_vni_1_id}
+	if [ -n "$OCF_RESKEY_vni_id_2" ]; then
+		vni_id_2=${OCF_RESKEY_vni_id_2}
 	else
 		ocf_log info "You need to specify the vni 2 id to be used"
 		return $OCF_ERR_ARGS
@@ -141,43 +140,52 @@ get_params()
 
 
 	instance_identity_token=$(curl -X PUT "http://169.254.169.254/instance_identity/v1/token?version=2022-03-08" -H "Metadata-Flavor: ibm" -d '{ "expires_in": 3600 }' | jq -r .access_token)
-	local_vni_id=(curl -X GET "http://169.254.169.254/metadata/v1/instance/network_attachments?version=2024-11-19" -H "Authorization: Bearer $instance_identity_token"  | jq -r .network_attachments[0].id)
+	local_vni_id=$(curl -X GET "http://169.254.169.254/metadata/v1/instance/network_attachments?version=2024-11-19" -H "Authorization: Bearer $instance_identity_token" | jq -r .network_attachments[0].virtual_network_interface.id)
 	FIP_IP=$(curl -X GET "http://169.254.169.254/metadata/v1/instance/network_interfaces?version=2022-05-24" -H "Authorization: Bearer $instance_identity_token" | jq -r .network_interfaces[0].floating_ips[0].address)
 	remote_vni_id=""
-	if local_vni_id == vni_1_id:
-		remote_vni_id=vni_2_id
-	if local_vni_id == vni_2_id:
-		remote_vni_id=vni_1_id
-	if remote_vni_id == "":
-		ocf_log err "Error. Local VNI ID $local_vni_id does not match $OCF_RESKEY_vni_2_id or $OCF_RESKEY_vni_1_id"
-		exit($OCF_ERR_GENERIC)
-	#echo "Going to do $SCRIPT $STARTARG $STOPARG $STARTANDSTOP " >> /tmp/params.txt
+	ocf_log info ">>>>>>>>>> local_vni :$local_vni_id:$vni_id_1:$vni_id_2::$OCF_SUCCESS"
+	if [ "$local_vni_id" = "$vni_id_1" ]; then 
+		remote_vni_id=$vni_id_2
+	fi
+	if [ "$local_vni_id" = "$vni_id_2" ]; then 
+		remote_vni_id=$vni_id_1
+	fi
+	
+	ocf_log info ">>>>>>>>>> remote_vni_id :$remote_vni_id:  $OCF_SUCCESS"
+	if [ "$remote_vni_id" -eq "" ]; then 
+		ocf_log err "Error. Local VNI ID $local_vni_id does not match $OCF_RESKEY_vni_id_2 or $OCF_RESKEY_vni_id_1"
+		exit $OCF_ERR_GENERIC
+	fi
 }
 
-fip-failover_monitor()
+fip_monitor()
 {
-	if [ -z "$FIP_IP" ]; then
-	  ocf_log info "Passive return $OCF_NOT_RUNNING"
+        if [ `echo $FIP_IP | grep -o '\.' | wc -l` -ne 3 ]; then
+	  ocf_log info "********Passive return FIP:$FIP_IP: $OCF_NOT_RUNNING"
 	  exit $OCF_NOT_RUNNING
 	fi
+	ocf_log info ">>>>>>>>>>Active return FIP: :$FIP_IP: $OCF_SUCCESS"
 	return $OCF_SUCCESS
 }
 
-fip-failover_start()
+fip_start()
 {
+	ocf_log info ">>>>>>>>>> fip_start: :$remote_vni_id:$local_vni_id:$fip_id:  $OCF_SUCCESS"
+	ocf_log info "python3 /root/ibm-cloud-pacemaker-plugin/scripts/ibm-cloud-pacemaker-fail-over.py FIP remove $remote_vni_id $fip_id"
   	python3 /root/ibm-cloud-pacemaker-plugin/scripts/ibm-cloud-pacemaker-fail-over.py FIP remove $remote_vni_id $fip_id 
   	python3 /root/ibm-cloud-pacemaker-plugin/scripts/ibm-cloud-pacemaker-fail-over.py FIP add  $local_vni_id $fip_id 
 	exit $OCF_SUCCESS
 }
 
 
-fip-failover_stop()
+fip_stop()
 {
+	ocf_log info ">>>>>>>>>> fip_start: :$FIP_IP: $OCF_SUCCESS"
   	python3 /root/ibm-cloud-pacemaker-plugin/scripts/ibm-cloud-pacemaker-fail-over.py FIP remove local_vni_id fip_id 
 	exit $OCF_SUCCESS
 }
 
-fip-failover_validate_all()
+fip_validate_all()
 {
 	# Is the state directory writable? 
 	state_dir=`dirname "$OCF_RESKEY_state"`
@@ -186,11 +194,6 @@ fip-failover_validate_all()
 		return $OCF_ERR_ARGS
 	fi
 	rm "$state_dir/$$"
-
-	if [ ! -n "$SCRIPT" -a ! -x "$SCRIPT" ]; then
-		ocf_log err "Binary path to script $SCRIPT does not exist."
-		exit $OCF_ERR_ARGS
-	fi
 
 	return $OCF_SUCCESS
 }
@@ -208,22 +211,23 @@ fi
 
 case $__OCF_ACTION in
 	start)	get_params
-		fip-failover_start
+		fip_start
 		;;
 
 	stop)	get_params
-		fip-failover_stop
+		fip_stop
 		;;
 
 	monitor)get_params
-		fip-failover_monitor
+		fip_monitor
 		;;
 
 	validate-all)	get_params
-			fip-failover_validate_all
+			fip_validate_all
 			;;
 
 	meta-data)	meta_data
+		        exit $OCF_SUCCESS
 			;;
 
 	usage)	usage
