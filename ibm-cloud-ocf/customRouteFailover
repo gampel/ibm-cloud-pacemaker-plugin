@@ -1,10 +1,8 @@
 #!/bin/bash
 
-  echo "here 1"  >> /tmp/start.txt
 : ${OCF_FUNCTIONS:="${OCF_ROOT}/resource.d/heartbeat/.ocf-shellfuncs"}
 . "${OCF_FUNCTIONS}"
 
-  echo "here 2"  >> /tmp/start.txt
 param=$1
 
 ## Defaults
@@ -16,7 +14,6 @@ instance_identity_token=$(curl -X PUT "http://169.254.169.254/instance_identity/
 export VPC_ID=$(curl -X GET "http://169.254.169.254/metadata/v1/instance?version=2022-05-24" -H "Authorization: Bearer $instance_identity_token" | jq -r .vpc.id) 
 export VSI_LOCAL_AZ=$(curl -X GET "http://169.254.169.254/metadata/v1/instance?version=2022-05-24" -H "Authorization: Bearer $instance_identity_token" | jq -r .zone.name) 
 
-  echo "here 3"  >> /tmp/start.txt
 meta_data() {
   cat <<END
 <?xml version="1.0"?>
@@ -77,12 +74,10 @@ END
 
 get_params()
 {
-  echo "here 4"  >> /tmp/start.txt
 	if [ -n "$OCF_RESKEY_api_key" ]; then
 		export API_KEY=${OCF_RESKEY_api_key}
 	else
 		ocf_log info "You need to specify api_key"
-  		echo "NO API KEY ---"  >> /tmp/start.txt
 	fi
 	if [ -n "$OCF_RESKEY_vpc_url" ]; then
 		export VPC_URL=${OCF_RESKEY_vpc_url}
@@ -98,9 +93,8 @@ get_params()
 
 if [ "start" == "$param" ] ; then
   ocf_log info "Calling start fail over  (${OCF_RESKEY_API_KEY})"
-  echo "start"  >> /tmp/start.txt
   get_params
-  python3 /root/ibm-cloud-pacemaker-plugin/scripts/ibm-cloud-pacemaker-fail-over.py SET
+  python3 /root/ibm-cloud-pacemaker-plugin/scripts/ibm-cloud-pacemaker-fail-over.py ROUTE SET
   exit $OCF_SUCCESS
 elif [ "stop" == "$param" ] ; then
   exit $OCF_SUCCESS
@@ -114,11 +108,8 @@ elif [ "status" == "$param" ] ; then
     exit 0
 elif [ "monitor" == "$param" ] ; then
   get_params
-  echo "monitor: ${API_KEY},${EXT_IP_1},${EXT_IP_2},${VPC_URL},  "  >> /tmp/start.txt
   ocf_log info "Calling monitor IIIII  (${API_KEY})"
-  active_ip=$(python3 /root/ibm-cloud-pacemaker-plugin/scripts/ibm-cloud-pacemaker-fail-over.py GET)
-  python3 /root/ibm-cloud-pacemaker-plugin/scripts/ibm-cloud-pacemaker-fail-over.py GET >> /tmp/start.txt
-  echo " active_ip = $active_ip"  >> /tmp/start.txt
+  active_ip=$(python3 /root/ibm-cloud-pacemaker-plugin/scripts/ibm-cloud-pacemaker-fail-over.py ROUTE GET)
   cmd="ip a"
   ocf_log info "executing command: $cmd active_ip: $active_ip"
   RESULT=$($cmd | grep "$active_ip") 
@@ -127,7 +118,6 @@ elif [ "monitor" == "$param" ] ; then
   	  exit $OCF_NOT_RUNNING
   fi
   ocf_log info "Active return $OCF_SUCCESS"
-  echo "monitor OCF_SUCCESS"  >> /tmp/start.txt
   exit $OCF_SUCCESS
 elif [ "meta-data" == "$param" ] ; then
   meta_data
