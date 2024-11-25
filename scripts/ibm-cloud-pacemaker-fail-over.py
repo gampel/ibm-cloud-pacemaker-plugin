@@ -48,6 +48,7 @@ class HAFailOver(object):
     ext_ip_1 = ''
     ext_ip_2 = ''
     DEBUG = False 
+    DEBUG = True 
     service = None
     
     def __init__(self):
@@ -108,6 +109,7 @@ class HAFailOver(object):
             
             if self.VPC_ID in env:
                 self.vpc_id = env[self.VPC_ID]
+                self.vpc_id = env[self.VPC_ID]
                 self.logger(self.VPC_ID + ": " + self.vpc_id)
             else:
                 self.parameterException(self.VPC_ID)
@@ -118,18 +120,12 @@ class HAFailOver(object):
             else:
                 self.parameterException(self.VPC_URL)
 
-            #if self.ZONE in env:
-            #    self.zone = env[self.ZONE]
-            #    self.logger(self.ZONE + ": " + self.zone)
-            #else:
-            #    self.parameterException(self.ZONE)
             if self.VSI_LOCAL_AZ in env:
                 self.vsi_local_az = env[self.VSI_LOCAL_AZ]
                 self.logger("VSI Local AZ: " + self.vsi_local_az)
             else:
-                self.parameterException(self.VSI_LOCAL_AZ)
+                self.vsi_local_az = ""
 
-          
 
             if self.EXT_IP_1 in env:
                 self.ext_ip_1 = env[self.EXT_IP_1]
@@ -144,8 +140,29 @@ class HAFailOver(object):
                 self.parameterException(self.EXT_IP_2)
 
         except Exception as e:
-            self.logger("--Parameter Missing Exception-- ", e)    
-            
+            self.logger(e)   
+
+        def update_vpc_fip(self, cmd, vni_id, fip_id):
+            self.logger("Calling update vpc routing table route method VIP.")    
+            self.logger("VPC ID: " + self.vpc_id) 
+            self.logger("VPC URL: " + self.vpc_url) 
+            self.logger("VPC self.ext_ip_1: " + self.ext_ip_1) 
+            self.logger("VPC self.ext_ip_2: " + self.ext_ip_2) 
+            self.logger("VPC self.api_key: " + self.apikey)
+            list_tables = ''
+            authenticator = IAMAuthenticator(self.apikey, url='https://iam.cloud.ibm.com')
+            self.service = VpcV1(authenticator=authenticator)
+            self.service.set_service_url(self.vpc_url)
+            try:
+                if cmd == "remove":
+                    remove_fip = service.remove_network_interface_floating_ip(vni_id,fip_id).get_result()
+                if cmd == "add":
+                    add_fip = service.add_network_interface_floating_ip(vni_id,fip_id).get_result()
+            except Exception as e:
+                print(e)
+               
+            return True
+
     def update_vpc_routing_table_route(self,cmd):   
         self.logger("Calling update vpc routing table route method VIP.")    
         self.logger("VPC ID: " + self.vpc_id) 
@@ -182,7 +199,6 @@ class HAFailOver(object):
                 self.logger ("Route ID: " + route['id'])
                 self.logger ("Next hop address of above Route ID: " + str(route['next_hop']))
                 if route['next_hop']['address'] == self.ext_ip_1 or route['next_hop']['address'] == self.ext_ip_2:
-                    self.logger (cmd)
                     if cmd == "GET":
                         self.logger("GET Command")
                         print (route['next_hop']['address'])
@@ -198,11 +214,10 @@ class HAFailOver(object):
                     route_patch_model['name'] = route['name']
                     route_patch_model['next_hop'] = route_next_hop_prototype_model
                     route_patch_model['priority'] = route['priority']
-
-                    self.logger("Update old route: " + route_id_temp)
+                    zone_identity_model = {'name': route['zone']['name']}
                     #for same AZ failover we can patch the nexthop using update
                     if route['zone']['name'] == self.vsi_local_az or not ingress_routing_table:
-                        
+                        self.logger("Update old route: " + route_id_temp)
                         self.logger("Same AZ Fail over AZ: " + self.vsi_local_az)
                         update_vpc_routing_table_route_response = self.service.update_vpc_routing_table_route(vpc_id=self.vpc_id, routing_table_id=table_id_temp, id=route_id_temp,route_patch=route_patch_model)
                         result = update_vpc_routing_table_route_response.get_result()
@@ -210,14 +225,19 @@ class HAFailOver(object):
                         self.logger (result)
                     else:
                         #Delete old route
-                        zone_identity_model = {'name': self.vsi_local_az}
-                        self.service.delete_vpc_routing_table_route(vpc_id=self.vpc_id, routing_table_id=table_id_temp, id=route_id_temp)
-                        self.logger("Deleted old route: " + route_id_temp)
-                        #Create new route
-                        create_vpc_routing_table_route_response = self.service.create_vpc_routing_table_route(vpc_id=self.vpc_id, routing_table_id=table_id_temp, destination=route['destination'], zone=zone_identity_model, action='deliver', next_hop=route_next_hop_prototype_model, name=route['name'])
-                        route = create_vpc_routing_table_route_response.get_result()
-                        self.logger("Created new route: " + route['id'])
-                    update_done = True
+                        try:
+                            if self.vsi_local_az != "":
+                                zone_identity_model = {'name': self.vsi_local_az}
+                            self.service.delete_vpc_routing_table_route(vpc_id=self.vpc_id, routing_table_id=table_id_temp, id=route_id_temp)
+                            self.logger("Deleted old route: " + route_id_temp)
+                            #Create new route
+                            create_vpc_routing_table_route_response = self.service.create_vpc_routing_table_route(vpc_id=self.vpc_id, routing_table_id=table_id_temp, destination=route['destination'], zone=zone_identity_model, action='deliver', next_hop=route_next_hop_prototype_model, name=route['name'], advertise=route['advertise'])
+                            route = create_vpc_routing_table_route_response.get_result()
+                            self.logger("Created new route: " + route['id'])
+                        except Exception as e:
+                            print(e)
+ 
+                        update_done = True
         return update_done       
             
     def logger(self, message):
@@ -225,6 +245,7 @@ class HAFailOver(object):
             print (message)
 
     def find_the_current_and_next_hop_ip(self, route_address):
+
         if route_address == self.ext_ip_1:
             #To be updated with IP address.
             self.update_next_hop_vsi = self.ext_ip_2
@@ -237,16 +258,27 @@ class HAFailOver(object):
             self.next_hop_vsi = self.ext_ip_2
         self.logger("Current next hop IP is: " + self.next_hop_vsi)
         self.logger("Update next hop IP to: " + self.update_next_hop_vsi)
-                
+
 def fail_over(cmd):
     haFailOver = HAFailOver()
     #self.logger("Request received from: " + remote_addr)
     made_update = haFailOver.update_vpc_routing_table_route(cmd)
-    #return "Updated Custom Route: " + str(made_update)
+    return "Updated Custom Route: " + str(made_update)
+
+def fail_over_fip(cmd,vni_id,fip_id):
+    haFailOver = HAFailOver()
+    made_update = haFailOver.update_vpc_fip(cmd, vni_id, fip_id)
+
+def usage_fip():
+    print('{0} [FIP] [CMD add|remove] [VNI_ID] [FIP_ID]'.format(sys.argv[0]))
+    print('\n')
 
 if __name__ == "__main__":
-    sys_argv_length=len(sys.argv)-1
-    if sys_argv_length == 1:
-        fail_over(sys.argv[1])
+    if len(sys.argv) > 2:
+        if sys.argv[1] == "FIP":
+            fail_over_fip(sys.argv[2], sys.argv[3], sys.argv[4])
+        elif sys.argv[1] == "ROUTE":
+            fail_over(sys.argv[2])
     else:
-        print ("Error must provide parameter usage: ibm-cloud-pacemaker-fail-over.py GET|SET")
+        print ("Error must provide parameter usage: ibm-cloud-pacemaker-fail-over.py ROUTE GET|SET")
+        usage_fip()

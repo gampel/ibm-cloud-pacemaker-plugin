@@ -1,0 +1,237 @@
+#!/bin/sh
+#
+# Resource script for fip-failover umm script
+#
+# Description:  Manages fip-failover as an OCF resource in
+#               an High Availability setup.
+#
+# FIP failover OCF script's Author: Russki
+# Rsync OCF script's Author: Dhairesh Oza <odhairesh@novell.com>
+# License: GNU General Public License (GPL)
+#
+# Copyright (c) 2024 Eran Gampel
+#	usage: $0 {start|stop|monitor|validate-all|meta-data}
+#
+#	The "start" arg starts fip-failover.
+#
+#	The "stop" arg stops it.
+#
+# OCF parameters:
+# OCF_RESKEY_script
+# OCF_RESKEY_startargs
+# OCF_RESKEY_stopargs
+# OCF_RESKEY_startandstop
+# OCF_RESKEY_args
+# OCF_RESKEY_statedir
+# OCF_RESKEY_alwaysrun
+#
+##########################################################################
+# Initialization:
+
+: ${OCF_FUNCTIONS_DIR=${OCF_ROOT}/resource.d/heartbeat}
+. ${OCF_FUNCTIONS_DIR}/.ocf-shellfuncs
+
+USAGE="Usage: $0 {start|stop|monitor|validate-all|meta-data}";
+
+##########################################################################
+
+usage()
+{
+	echo $USAGE >&2
+}
+
+meta_data()
+{
+cat <<END
+<?xml version="1.0"?>
+<!DOCTYPE resource-agent SYSTEM "ra-api-1.dtd">
+<resource-agent name="fip-failover">
+<version>1.0</version>
+<longdesc lang="en">
+This script manages fip-failover script
+</longdesc>
+<shortdesc lang="en">Manages the fip-failover script</shortdesc>
+
+<parameters>
+
+<parameter name="api_key">
+<longdesc lang="en">
+IBM Cloud API key to be used 
+</longdesc>
+<shortdesc lang="en">IBM Cloud API key</shortdesc>
+<content type="string" default=""/>
+</parameter>
+
+<parameter name="vni_1_id">
+<longdesc lang="en">
+IBM Cloud Virtual Network Interafce ID to be used  
+</longdesc>
+<shortdesc lang="en">IBM Cloud VNI 1 ID</shortdesc>
+<content type="string" default=""/>
+</parameter>
+<parameter name="vni_2_id">
+<longdesc lang="en">
+IBM Cloud Virtual Network Interafce ID to be used  
+</longdesc>
+<shortdesc lang="en">IBM Cloud VNI 2 ID</shortdesc>
+<content type="string" default=""/>
+</parameter>
+<parameter name="fip_id">
+<longdesc lang="en">
+IBM Cloud Floating Ip ID to be used  
+</longdesc>
+<shortdesc lang="en">IBM Cloud FIP ID</shortdesc>
+<content type="string" default=""/>
+</parameter>
+<parameter name="vni_1_id">
+<longdesc lang="en">
+IBM Cloud VNI 1 ID to be used  
+</longdesc>
+<shortdesc lang="en">IBM Cloud VNI 1  ID</shortdesc>
+<content type="string" default=""/>
+</parameter>
+<parameter name="vni_2_id">
+<longdesc lang="en">
+IBM Cloud VNI 2 ID to be used  
+</longdesc>
+<shortdesc lang="en">IBM Cloud VNI 2  ID</shortdesc>
+<content type="string" default=""/>
+</parameter>
+
+</parameters>
+
+<actions>
+<action name="start" timeout="20s"/>
+<action name="stop" timeout="20s"/>
+<action name="monitor" depth="0" timeout="20s" interval="60s" />
+<action name="validate-all" timeout="20s"/>
+<action name="meta-data"  timeout="5s"/>
+</actions>
+</resource-agent>
+END
+exit $OCF_SUCCESS
+}
+
+get_params()
+{
+	if [ -n "$OCF_RESKEY_api_key" ]; then
+		export API_KEY=${OCF_RESKEY_ap_key}
+	else
+		ocf_log info "You need to specify teh api key to be used"
+		return $OCF_ERR_ARGS
+	fi
+	if [ -n "$OCF_RESKEY_fip_id" ]; then
+		fip_id=${OCF_RESKEY_fip_id}
+	else
+		ocf_log info "You need to specify the fip id to be used"
+		return $OCF_ERR_ARGS
+	fi
+	if [ -n "$OCF_RESKEY_vni_1_id" ]; then
+		vni_1_id=${OCF_RESKEY_vni_1_id}
+	else
+		ocf_log info "You need to specify the vni 1  id to be used"
+		return $OCF_ERR_ARGS
+	fi
+	if [ -n "$OCF_RESKEY_vni_2_id" ]; then
+		vni_2_id=${OCF_RESKEY_vni_1_id}
+	else
+		ocf_log info "You need to specify the vni 2 id to be used"
+		return $OCF_ERR_ARGS
+	fi
+
+
+	instance_identity_token=$(curl -X PUT "http://169.254.169.254/instance_identity/v1/token?version=2022-03-08" -H "Metadata-Flavor: ibm" -d '{ "expires_in": 3600 }' | jq -r .access_token)
+	local_vni_id=(curl -X GET "http://169.254.169.254/metadata/v1/instance/network_attachments?version=2024-11-19" -H "Authorization: Bearer $instance_identity_token"  | jq -r .network_attachments[0].id)
+	FIP_IP=$(curl -X GET "http://169.254.169.254/metadata/v1/instance/network_interfaces?version=2022-05-24" -H "Authorization: Bearer $instance_identity_token" | jq -r .network_interfaces[0].floating_ips[0].address)
+	remote_vni_id=""
+	if local_vni_id == vni_1_id:
+		remote_vni_id=vni_2_id
+	if local_vni_id == vni_2_id:
+		remote_vni_id=vni_1_id
+	if remote_vni_id == "":
+		ocf_log err "Error. Local VNI ID $local_vni_id does not match $OCF_RESKEY_vni_2_id or $OCF_RESKEY_vni_1_id"
+		exit($OCF_ERR_GENERIC)
+	#echo "Going to do $SCRIPT $STARTARG $STOPARG $STARTANDSTOP " >> /tmp/params.txt
+}
+
+fip-failover_monitor()
+{
+	if [ -z "$FIP_IP" ]; then
+	  ocf_log info "Passive return $OCF_NOT_RUNNING"
+	  exit $OCF_NOT_RUNNING
+	fi
+	return $OCF_SUCCESS
+}
+
+fip-failover_start()
+{
+  	python3 /root/ibm-cloud-pacemaker-plugin/scripts/ibm-cloud-pacemaker-fail-over.py FIP remove $remote_vni_id $fip_id 
+  	python3 /root/ibm-cloud-pacemaker-plugin/scripts/ibm-cloud-pacemaker-fail-over.py FIP add  $local_vni_id $fip_id 
+	exit $OCF_SUCCESS
+}
+
+
+fip-failover_stop()
+{
+  	python3 /root/ibm-cloud-pacemaker-plugin/scripts/ibm-cloud-pacemaker-fail-over.py FIP remove local_vni_id fip_id 
+	exit $OCF_SUCCESS
+}
+
+fip-failover_validate_all()
+{
+	# Is the state directory writable? 
+	state_dir=`dirname "$OCF_RESKEY_state"`
+	touch "$state_dir/$$"
+	if [ $? != 0 ]; then
+		return $OCF_ERR_ARGS
+	fi
+	rm "$state_dir/$$"
+
+	if [ ! -n "$SCRIPT" -a ! -x "$SCRIPT" ]; then
+		ocf_log err "Binary path to script $SCRIPT does not exist."
+		exit $OCF_ERR_ARGS
+	fi
+
+	return $OCF_SUCCESS
+}
+
+: ${OCF_RESKEY_state=${OCF_RESKEY_statedir:-$HA_RSCTMP}/fip-failover-${OCF_RESOURCE_INSTANCE}.state}
+
+#
+# Main
+#
+
+if [ $# -ne 1 ]; then
+	usage
+	exit $OCF_ERR_ARGS
+fi
+
+case $__OCF_ACTION in
+	start)	get_params
+		fip-failover_start
+		;;
+
+	stop)	get_params
+		fip-failover_stop
+		;;
+
+	monitor)get_params
+		fip-failover_monitor
+		;;
+
+	validate-all)	get_params
+			fip-failover_validate_all
+			;;
+
+	meta-data)	meta_data
+			;;
+
+	usage)	usage
+		exit $OCF_SUCCESS
+		;;
+
+	*)	usage
+		exit $OCF_ERR_UNIMPLEMENTED
+		;;
+esac
+
