@@ -1,0 +1,13 @@
+sudo apt-get -y update
+sudo apt-get install pacemaker
+sudo python -m pip install --upgrade ibm-cloud-sdk-core
+sudo python3 -m pip install --upgrade ibm-vpc
+sudo apt-get install  python3-dotenv
+sudo apt-get install haveged
+sudo corosync-keygen
+sudo apt-get remove --purge haveged
+sudo apt-get clean
+
+
+echo "Please copy authkey to secound ip sudo scp /etc/corosync/authkey username@secondary_ip:/tmp"
+sudo corosync-cmapctl | grep members
