@@ -1,3 +1,4 @@
+
 ```markdown
 # IBM Cloud VPC Pacemaker Plugin
 
@@ -35,26 +36,72 @@ Pacemaker is an open-source high-availability (HA) cluster resource manager wide
    ```bash
    git clone https://github.com/gampel/ibm-cloud-pacemaker-plugin.git
    ```
-
-2. **Build the Plugin**:
+    
+2. **Install the Plugin & dependencies **:
    Navigate into the cloned directory and build the plugin:
 
    ```bash
    cd ibm-cloud-pacemaker-plugin
-   make
+   make install 
    ```
+   Currently, only apt-get (Ubuntu) based install is supported
 
-3. **Install the Plugin**:
-   Depending on your setup, you may need to copy the plugin files to the appropriate directories used by Pacemaker:
+4. **Configure CoroSync**:
+   Configure /etc/corosync/corosync.conf with your two nodes Active Passive Ips 
 
-   ```bash
-   sudo cp <plugin-binary> /usr/lib/pacemaker/
-   ```
+   
 
-   Replace `<plugin-binary>` with the actual binary name created during the build process.
+Example Configuration is provided in [corosync.conf](https://github.com/gampel/ibm-cloud-pacemaker-plugin/blob/main/conf/corosync.conf)
+  
 
-4. **Configure the Plugin**:
-   Configure the plugin to connect with your IBM Cloud account. You may have to define the necessary credentials and configurations in the Pacemaker configuration files.
+        totem {
+      version: 2
+      cluster_name: IBM-cluster
+      transport: udpu
+      interface {
+        ringnumber: 0
+        bindnetaddr: <Loacl_Ip>
+        broadcast: yes
+        mcastport: 5405
+      }
+    }
+    
+    quorum {
+      provider: corosync_votequorum
+      two_node: 1
+    }
+    
+    nodelist {
+      node {
+        ring0_addr: <vsi_1_ip>
+        name: primary
+        nodeid: 1
+      }
+      node {
+        ring0_addr: <vs_2_ip>
+        name: secondary
+        nodeid: 2
+      }
+    }
+    
+    logging {
+      to_logfile: yes
+      logfile: /var/log/corosync/corosync.log
+      to_syslog: yes
+      timestamp: on
+    }
+
+Do the same setup on both Selected VSI pair 
+
+Copy the created auth key as part of the install to be the selected pair auth key
+
+    scp /etc/corosync/authkey username@second_vsi_ip:/tmp
+    
+Copy it in  the second VSI to the /etc/corosync/authkey  directory and make sure it is root-owned 
+
+    sudo mv /tmp/authkey /etc/corosync
+    sudo chown root: /etc/corosync/authkey
+    sudo chmod 400 /etc/corosync/authkey  
 
 ## Usage
 
@@ -111,8 +158,8 @@ vpc_url  =  `The VPC URL to be used can be the Public VPC API endpoint for your 
    You can monitor and manage your resources using standard Pacemaker commands:
 
    ```bash
-   crm status
-   crm resource show
+   pcs status
+   pcs resource show
    ```
 
 4. **Failover and Recovery**:
