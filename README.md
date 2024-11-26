@@ -1,6 +1,3 @@
-
-
-
 ```markdown
 # IBM Cloud VPC Pacemaker Plugin
 
