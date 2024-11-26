@@ -83,14 +83,14 @@ Pacemaker is an open-source high-availability (HA) cluster resource manager wide
 
  
 
-> api_key = `[IBM Cloud API Key](https://cloud.ibm.com/docs/account?topic=account-userapikey&interface=ui)`  Your VPC Access API key 
-
-> ext_ip_1 = `Private IP for the first VSI`
-> 
-> ext_ip_2 = `Private IP for the secound VSI`
-> 
-> vpc_url. =. `The VPC URL to be used can be the Public VPC API endpoint for your region or VPE (private path) to your regional VPC API endpoint.
->    `
+api_key = `[IBM Cloud API Key](https://cloud.ibm.com/docs/account?topic=account-userapikey&interface=ui) Your VPC Access API key` 
+ 
+ext_ip_1 = `Private IP for the first VSI`enter code here
+ 
+ext_ip_2 =  `Private IP for the second VSI`
+ 
+vpc_url  =  `The VPC URL to be used can be the Public VPC API endpoint for your region or VPE (private path) to your regional VPC API endpoint.
+    `
 ```bash   
 pcs resource create  floatingIpFailover  ocf:ibm-cloud:floatingIpFailover  \
                        api_key="API_KEY" \
@@ -99,6 +99,15 @@ pcs resource create  floatingIpFailover  ocf:ibm-cloud:floatingIpFailover  \
                        fip_id="r050-f0e45301-f07d-4117-86b7-dd0ea60e5b9f" \
                        vpc_url="https://eu-es.iaas.cloud.ibm.com/v1"
    ```
+  api_key =  `IBM Cloud API Key Your VPC Access API key`  
+ 
+vni_id_1 = `First Virtual Network Interface (VNI) uuid`
+
+vni_id_2 = `Secound Virtual Network Interface (VNI) uuid`
+
+fip_id =  `Floating IP uuid we want to use`
+ 
+vpc_url  =  `The VPC URL to be used can be the Public VPC API endpoint for your region or VPE (private path) to your regional VPC API endpoint.
    Replace `MyResource` and `[property=value]` with your resource name and properties accordingly.
 
 3. **Monitor and Manage Resources**:
