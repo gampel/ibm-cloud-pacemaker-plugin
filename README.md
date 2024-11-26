@@ -1,3 +1,6 @@
+
+
+
 ```markdown
 # IBM Cloud VPC Pacemaker Plugin
 
@@ -81,12 +84,13 @@ Pacemaker is an open-source high-availability (HA) cluster resource manager wide
  
 
 > api_key = `[IBM Cloud API Key](https://cloud.ibm.com/docs/account?topic=account-userapikey&interface=ui)`  Your VPC Access API key 
+
 > ext_ip_1 = `Private IP for the first VSI`
+> 
 > ext_ip_2 = `Private IP for the secound VSI`
+> 
 > vpc_url. =. `The VPC URL to be used can be the Public VPC API endpoint for your region or VPE (private path) to your regional VPC API endpoint.
 >    `
-
- = 
 ```bash   
 pcs resource create  floatingIpFailover  ocf:ibm-cloud:floatingIpFailover  \
                        api_key="API_KEY" \
