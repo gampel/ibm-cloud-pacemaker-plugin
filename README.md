@@ -1,33 +1,31 @@
-pcs resource create  customRouteFailover ocf:ibm-cloud:customRouteFailover api_key="API_KEY" ext_ip_1="IP_1" ext_ip_2="IP_@" vpc_url="https://eu-es.iaas.cloud.ibm.com/v1"
-
-
-
-
-pcs resource create  floatingIpFailover  ocf:ibm-cloud:floatingIpFailover  api_key="API_KEY" vni_id_1="02w7-afc89131-7901-4603-848a-5488680c683d" vni_id_2="02w7-c0f2ff9b-3128-4d91-ab32-7d612659867d" fip_id="r050-f0e45301-f07d-4117-86b7-dd0ea60e5b9f" fip_id="r050-f0e45301-f07d-4117-86b7-dd0ea60e5b9f" vpc_url="https://eu-es.iaas.cloud.ibm.com/v1"
-
-Sure! Below is a draft for the `README.md` file for the GitHub repository you mentioned. 
-
 ```markdown
-# IBM Cloud Pacemaker Plugin
+# IBM Cloud VPC Pacemaker Plugin
 
-This repository contains the IBM Cloud Pacemaker Plugin, which provides integration between IBM Cloud and the Pacemaker cluster resource manager. The plugin enables you to manage cloud resources and deployment within Pacemaker, allowing high availability for your applications in the IBM Cloud environment.
+This repository contains the IBM Cloud Pacemaker Plugin, which provides integration between IBM Cloud and the Pacemaker cluster resource manager. The plugin enables you to manage cloud resources and deployment within Pacemaker, allowing high availability for your applications in the IBM VPC Cloud environment.
 
 ## Background
 
-Pacemaker is an open-source high availability (HA) cluster resource manager that is widely used for managing resources in a cluster. The IBM Cloud Pacemaker Plugin extends Pacemaker’s capabilities by adding support for managing IBM Cloud resources, providing an easy way to deploy cloud-based applications in a high-availability setup.
+Pacemaker is an open-source high-availability (HA) cluster resource manager widely used for managing cluster resources. The IBM Cloud Pacemaker Plugin extends Pacemaker’s capabilities by adding support for managing IBM Cloud resources in Active Passive mode, providing an easy way to deploy cloud-based applications in a high-availability setup.
 
 ## Features
 
 - Seamless integration with IBM Cloud.
 - Ability to manage cloud resources directly from Pacemaker.
 - High availability for applications running on IBM Cloud.
+- For 
+	- Custom route VIP,  active passive same AZ or Cross AZ  
+	- Floating IP Failover (same AZ)
 - Supports easy configuration and deployment.
 
 ## Prerequisites
 
 - A working IBM Cloud account.
-- Access to a machine capable of running Pacemaker.
+- VNI-based Virtual Network Interfaces 
+- [Instance Metadata enabled](https://cloud.ibm.com/docs/vpc?topic=vpc-imd-about) on the VSI pairs 
+- Access to a machine capable of running a Pacemaker.
+- [IBM Cloud VPC Python SDK](https://github.com/IBM/vpc-python-sdk) 
 - Installation of Pacemaker on the cluster.
+- 
 
 ## Installation
 
@@ -78,6 +76,17 @@ Pacemaker is an open-source high availability (HA) cluster resource manager that
                         ext_ip_2="IP_2"   \
                         vpc_url="https://eu-es.iaas.cloud.ibm.com/v1"
    ```
+   
+
+ 
+
+> api_key = `[IBM Cloud API Key](https://cloud.ibm.com/docs/account?topic=account-userapikey&interface=ui)`  Your VPC Access API key 
+> ext_ip_1 = `Private IP for the first VSI`
+> ext_ip_2 = `Private IP for the secound VSI`
+> vpc_url. =. `The VPC URL to be used can be the Public VPC API endpoint for your region or VPE (private path) to your regional VPC API endpoint.
+>    `
+
+ = 
 ```bash   
 pcs resource create  floatingIpFailover  ocf:ibm-cloud:floatingIpFailover  \
                        api_key="API_KEY" \
@@ -105,7 +114,7 @@ Contributions to the project are welcome. If you would like to contribute, pleas
 
 ## License
 
-This project is licensed under the [MIT License](LICENSE). See the LICENSE file for more details.
+This project is licensed under the   . See the LICENSE file for more details.
 
 ## Contact
 
