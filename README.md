@@ -103,17 +103,48 @@ Copy it in  the second VSI to the /etc/corosync/authkey  directory and make sure
     sudo chown root: /etc/corosync/authkey
     sudo chmod 400 /etc/corosync/authkey  
 
-## Usage
+Now we nee to restart corosyn of both VSIs 
 
-1. **Start the Pacemaker Service**:
-   Ensure that your Pacemaker service is running. You can start it with:
+    sudo service corosync restart 
 
-   ```bash
-   sudo systemctl start pacemaker
-   ```
+Set stonith to false on both VSI's
 
-2. **Add Resources**:
-   Use the Pacemaker command-line interface to add IBM Cloud resources. For example:
+    pcs property set stonith-enabled=false
+
+Run pcs status you should get the following: 
+
+    :>> pcs status
+    Cluster name: IBM-HA-Cluster
+    Cluster Summary:
+      * Stack: corosync
+      * Current DC: primary (version 2.1.2-ada5c3b36e2) - partition with quorum
+      * Last updated: Tue Nov 26 18:44:35 2024
+      * Last change:  Tue Nov 26 18:44:30 2024 by root via cibadmin on secondary
+      * 2 nodes configured
+      * 0 resource instances configured
+    
+    Node List:
+      * Online: [ primary secondary ]
+    
+    Full List of Resources:
+      * No resources
+    
+    Daemon Status:
+      corosync: active/enabled
+      pacemaker: active/enabled
+      pcsd: active/enabled
+
+## Configuring the Pacemaker resource 
+
+1. **Add Resources**:
+   Use the Pacemaker command-line interface to add IBM Cloud resources. 
+Currently supported resources are:
+
+> customRouteFailover: HA based on IBM Cloud Custom route Supports both same zone and cross-zone HA 
+
+>  floatingIpFailover: Public Ingress HA based on IBM VPC Floating IP 
+
+For example:
 
    ```bash
    
@@ -189,3 +220,4 @@ To send this as a pull request (PR) to the repository:
 6. Select your fork and compare it with the base repository, then create the pull request.
 
 Feel free to adjust any sections according to your preferences or additional information you may want to include!
+
