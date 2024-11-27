@@ -3,7 +3,7 @@
 ```markdown
 # IBM Cloud VPC Pacemaker Plugin
 
-This repository contains the IBM Cloud Pacemaker Plugin, which provides integration between IBM Cloud and the Pacemaker
+This repository contains the IBM Cloud Pacemaker Plugins, which provides integration between IBM Cloud and the Pacemaker
 cluster resource manager. The plugin enables you to manage cloud resources and deployment within Pacemaker, allowing high
 availability for your applications in the IBM VPC Cloud environment.
 
@@ -19,14 +19,14 @@ Active Passive mode, providing an easy way to deploy cloud-based applications in
 - Ability to manage cloud resources directly from Pacemaker.
 - High availability for applications running on IBM Cloud.
 - For 
-	- Custom route VIP,  active passive same AZ or Cross AZ  
-	- Floating IP Failover (same AZ)
+	- Custom route VIP,  active passive same AZ or Cross/Multi-AZ  
+	- Floating IP Failover (Singel AZ)
 - Supports easy configuration and deployment.
 
 ## Prerequisites
 
 - A working IBM Cloud account.
-- VNI-based Virtual Network Interfaces pair to be uesd as active passive pair
+- VNI-based Virtual Network Interfaces pair to be used as active-passive pair
 - allow_ip_spoofing enabled on the Virtual network interface  
 - [Instance Metadata enabled](https://cloud.ibm.com/docs/vpc?topic=vpc-imd-about) on the VSI pairs 
 - Access to a machine capable of running a Pacemaker.
@@ -188,6 +188,12 @@ vni_id_2 = `Secound Virtual Network Interface (VNI) uuid`
 fip_id =  `Floating IP uuid we want to use`
  
 vpc_url  =  `The VPC URL to be used can be the Public VPC API endpoint for your region or VPE (private path) to your regional VPC API endpoint.
+
+> For example, for the Madrid Region, we can use 
+> Private -https://eu-es.private.iaas.cloud.ibm.com/v1
+> or
+> Public  - https://eu-es.iaas.cloud.ibm.com/v1
+
    
    Replace `MyResource` and `[property=value]` with your selected resource name and properties accordingly.
 
