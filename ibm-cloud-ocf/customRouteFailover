@@ -1,18 +1,42 @@
-#!/bin/bash
-
+#!/bin/sh
+#
+# Resource script for ibm_vpc_cr-failover umm script
+#
+# Description:  Manages ibm_vpc_cr-failover as an OCF resource in
+#               an High Availability setup.
+#
+# IBM Cloud VPC Custom Route VIP failover OCF script's Author: gampel
+# License: GNU General Public License (GPL)
+#
+# Copyright (c) 2024 Eran Gampel
+#	usage: $0 {start|stop|monitor|validate-all|meta-data}
+#
+#	The "start" arg starts ibm_vpc_cr-failover.
+#
+#	The "stop" arg stops it.
+#
+# OCF parameters:
+# OCF_RESKEY_script
+# OCF_RESKEY_startargs
+# OCF_RESKEY_stopargs
+# OCF_RESKEY_startandstop
+# OCF_RESKEY_args
+# OCF_RESKEY_statedir
+# OCF_RESKEY_alwaysrun
+#
+##########################################################################
+# Initialization:
 : ${OCF_FUNCTIONS:="${OCF_ROOT}/resource.d/heartbeat/.ocf-shellfuncs"}
 . "${OCF_FUNCTIONS}"
 
-param=$1
+USAGE="Usage: $0 {start|stop|monitor|validate-all|meta-data}";
 
-## Defaults
-#
-OCF_IBM_auth_type_default="key"
-instance_identity_token=$(curl -X PUT "http://169.254.169.254/instance_identity/v1/token?version=2022-03-08" -H "Metadata-Flavor: ibm" -d '{ "expires_in": 3600 }' | jq -r .access_token)
-#export instance_primary_ip=$(curl -X GET "http://169.254.169.254/metadata/v1/instance/network_interfaces?version=2022-05-24" -H "Authorization: Bearer $instance_identity_token" | jq -r .network_interfaces[0].primary_ipv4_address)
-#FIP_IP=$(curl -X GET "http://169.254.169.254/metadata/v1/instance/network_interfaces?version=2022-05-24" -H "Authorization: Bearer $instance_identity_token" | jq -r .network_interfaces[0].floating_ips[0].address)
-export VPC_ID=$(curl -X GET "http://169.254.169.254/metadata/v1/instance?version=2022-05-24" -H "Authorization: Bearer $instance_identity_token" | jq -r .vpc.id) 
-export VSI_LOCAL_AZ=$(curl -X GET "http://169.254.169.254/metadata/v1/instance?version=2022-05-24" -H "Authorization: Bearer $instance_identity_token" | jq -r .zone.name) 
+##########################################################################
+
+usage()
+{
+	echo $USAGE >&2
+}
 
 meta_data() {
   cat <<END
@@ -72,6 +96,7 @@ Ip address for instace 2
 END
 }
 
+
 get_params()
 {
 	if [ -n "$OCF_RESKEY_api_key" ]; then
@@ -88,41 +113,96 @@ get_params()
 	if [ -n "$OCF_RESKEY_ext_ip_2" ]; then
 		export EXT_IP_2=${OCF_RESKEY_ext_ip_2}
 	fi
+	OCF_IBM_auth_type_default="key"
+	instance_identity_token=$(curl -X PUT "http://169.254.169.254/instance_identity/v1/token?version=2022-03-08" -H "Metadata-Flavor: ibm" -d '{ "expires_in": 3600 }' | jq -r .access_token)
+	#export instance_primary_ip=$(curl -X GET "http://169.254.169.254/metadata/v1/instance/network_interfaces?version=2022-05-24" -H "Authorization: Bearer $instance_identity_token" | jq -r .network_interfaces[0].primary_ipv4_address)
+	#FIP_IP=$(curl -X GET "http://169.254.169.254/metadata/v1/instance/network_interfaces?version=2022-05-24" -H "Authorization: Bearer $instance_identity_token" | jq -r .network_interfaces[0].floating_ips[0].address)
+	export VPC_ID=$(curl -X GET "http://169.254.169.254/metadata/v1/instance?version=2022-05-24" -H "Authorization: Bearer $instance_identity_token" | jq -r .vpc.id) 
+	export VSI_LOCAL_AZ=$(curl -X GET "http://169.254.169.254/metadata/v1/instance?version=2022-05-24" -H "Authorization: Bearer $instance_identity_token" | jq -r .zone.name) 
+
+
 }
 
-
-if [ "start" == "$param" ] ; then
-  ocf_log info "Calling start fail over  (${OCF_RESKEY_API_KEY})"
-  get_params
-  ibm-cloud-pacemaker-fail-over.py ROUTE SET
-  exit $OCF_SUCCESS
-elif [ "stop" == "$param" ] ; then
-  exit $OCF_SUCCESS
-elif [ "status" == "$param" ] ; then
-    
-    echo "VPC_ID= "
-    echo $VPC_ID
-    echo "active passive ips "
-    echo $EXT_IP_1 
-    echo $EXT_IP_2 
-    exit 0
-elif [ "monitor" == "$param" ] ; then
-  get_params
-  ocf_log info "Calling monitor IIIII  (${API_KEY})"
+ibm_vpc_cr_monitor()
+{
   active_ip=$(ibm-cloud-pacemaker-fail-over.py ROUTE GET)
   cmd="ip a"
-  ocf_log info "executing command: $cmd active_ip: $active_ip"
+  ocf_log debug "executing command: $cmd active_ip: $active_ip"
   RESULT=$($cmd | grep "$active_ip") 
   if [ -z "$RESULT" ]; then
   	  ocf_log info "Passive return $OCF_NOT_RUNNING"
   	  exit $OCF_NOT_RUNNING
   fi
-  ocf_log info "Active return $OCF_SUCCESS"
+  ocf_log debug "Active return $OCF_SUCCESS"
   exit $OCF_SUCCESS
-elif [ "meta-data" == "$param" ] ; then
-  meta_data
-  exit 0
+
+}
+
+ibm_vpc_cr_start()
+{
+	ocf_log info ">>>>>>>>>> ibm_vpc_cr_start: :$VSI_LOCAL_AZ:  $OCF_SUCCESS"
+  	ibm-cloud-pacemaker-fail-over.py ROUTE SET
+	exit $OCF_SUCCESS
+}
+
+
+ibm_vpc_cr_stop()
+{
+	ocf_log info ">>>>>>>>>> ibm_vpc_cr_stop: :$FIP_IP: $OCF_SUCCESS"
+	exit $OCF_SUCCESS
+}
+
+ibm_vpc_cr_validate_all()
+{
+	# Is the state directory writable? 
+	state_dir=`dirname "$OCF_RESKEY_state"`
+	touch "$state_dir/$$"
+	if [ $? != 0 ]; then
+		return $OCF_ERR_ARGS
+	fi
+	rm "$state_dir/$$"
+
+	return $OCF_SUCCESS
+}
+
+: ${OCF_RESKEY_state=${OCF_RESKEY_statedir:-$HA_RSCTMP}/ibm_vpc_cr-failover-${OCF_RESOURCE_INSTANCE}.state}
+
+#
+# Main
+#
+
+if [ $# -ne 1 ]; then
+	usage
+	exit $OCF_ERR_ARGS
 fi
-rc=$?
-ocf_log info "${OCF_RESOURCE_INSTANCE} $__OCF_ACTION : $rc"
-exit $rc
+
+case $__OCF_ACTION in
+	start)	get_params
+		ibm_vpc_cr_start
+		;;
+
+	stop)	get_params
+		ibm_vpc_cr_stop
+		;;
+
+	monitor)get_params
+		ibm_vpc_cr_monitor
+		;;
+
+	validate-all)	get_params
+			ibm_vpc_cr_validate_all
+			;;
+
+	meta-data)	meta_data
+		        exit $OCF_SUCCESS
+			;;
+
+	usage)	usage
+		exit $OCF_SUCCESS
+		;;
+
+	*)	usage
+		exit $OCF_ERR_UNIMPLEMENTED
+		;;
+esac
+

@@ -5,7 +5,7 @@
 # Description:  Manages fip-failover as an OCF resource in
 #               an High Availability setup.
 #
-# FIP failover OCF script's Author: Russki
+# FIP failover OCF script's Author: Gampel
 # Rsync OCF script's Author: Dhairesh Oza <odhairesh@novell.com>
 # License: GNU General Public License (GPL)
 #
