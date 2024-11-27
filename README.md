@@ -189,9 +189,12 @@ fip_id =  `Floating IP uuid we want to use`
  
 vpc_url  =  `The VPC URL to be used can be the Public VPC API endpoint for your region or VPE (private path) to your regional VPC API endpoint.
 
-> For example, for the Madrid Region, we can use 
+> For example, for the Madrid Region, we can use
+> 
 > Private -https://eu-es.private.iaas.cloud.ibm.com/v1
+> 
 > or
+> 
 > Public  - https://eu-es.iaas.cloud.ibm.com/v1
 
    
