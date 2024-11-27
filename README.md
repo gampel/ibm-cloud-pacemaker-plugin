@@ -1,12 +1,17 @@
 
+
 ```markdown
 # IBM Cloud VPC Pacemaker Plugin
 
-This repository contains the IBM Cloud Pacemaker Plugin, which provides integration between IBM Cloud and the Pacemaker cluster resource manager. The plugin enables you to manage cloud resources and deployment within Pacemaker, allowing high availability for your applications in the IBM VPC Cloud environment.
+This repository contains the IBM Cloud Pacemaker Plugin, which provides integration between IBM Cloud and the Pacemaker
+cluster resource manager. The plugin enables you to manage cloud resources and deployment within Pacemaker, allowing high
+availability for your applications in the IBM VPC Cloud environment.
 
 ## Background
 
-Pacemaker is an open-source high-availability (HA) cluster resource manager widely used for managing cluster resources. The IBM Cloud Pacemaker Plugin extends Pacemaker’s capabilities by adding support for managing IBM Cloud resources in Active Passive mode, providing an easy way to deploy cloud-based applications in a high-availability setup.
+Pacemaker is an open-source high-availability (HA) cluster resource manager widely used for managing cluster resources.
+The IBM Cloud Pacemaker Plugin extends Pacemaker’s capabilities by adding support for managing IBM Cloud resources in
+Active Passive mode, providing an easy way to deploy cloud-based applications in a high-availability setup.
 
 ## Features
 
@@ -21,12 +26,12 @@ Pacemaker is an open-source high-availability (HA) cluster resource manager wide
 ## Prerequisites
 
 - A working IBM Cloud account.
-- VNI-based Virtual Network Interfaces 
+- VNI-based Virtual Network Interfaces pair to be uesd as active passive pair
+- allow_ip_spoofing enabled on the Virtual network interface  
 - [Instance Metadata enabled](https://cloud.ibm.com/docs/vpc?topic=vpc-imd-about) on the VSI pairs 
 - Access to a machine capable of running a Pacemaker.
 - [IBM Cloud VPC Python SDK](https://github.com/IBM/vpc-python-sdk) 
-- Installation of Pacemaker on the cluster.
-- 
+- Installation of Pacemaker on the Active Passive cluster
 
 ## Installation
 
@@ -183,11 +188,36 @@ vni_id_2 = `Secound Virtual Network Interface (VNI) uuid`
 fip_id =  `Floating IP uuid we want to use`
  
 vpc_url  =  `The VPC URL to be used can be the Public VPC API endpoint for your region or VPE (private path) to your regional VPC API endpoint.
-   Replace `MyResource` and `[property=value]` with your resource name and properties accordingly.
+   
+   Replace `MyResource` and `[property=value]` with your selected resource name and properties accordingly.
+
+Run pcs status you should get the following: 
+
+    Cluster name: IBM-HA-Cluster
+    Cluster Summary:
+      * Stack: corosync
+      * Current DC: primary (version 2.1.2-ada5c3b36e2) - partition with quorum
+      * Last updated: Wed Nov 27 16:23:41 2024
+      * Last change:  Wed Nov 27 09:43:10 2024 by root via cibadmin on secondary
+      * 2 nodes configured
+      * 1 resource instance configured
+    
+    Node List:
+      * Online: [ primary secondary ]
+    
+    Full List of Resources:
+      * customRouteFailover	(ocf:ibm-cloud:customRouteFailover):	 Started primary
+    
+    Daemon Status:
+      corosync: active/enabled
+      pacemaker: active/enabled
+      pcsd: active/enabled
+
+The customRouteFailover  Plugin will seamlessly figure out if the VNI pair are on the same zone  or apply cross az failover in case they are in different zones 
 
 3. **Monitor and Manage Resources**:
    You can monitor and manage your resources using standard Pacemaker commands: 
-
+>
     pcs status
 >  
     pcs resource show
@@ -196,6 +226,7 @@ vpc_url  =  `The VPC URL to be used can be the Public VPC API endpoint for your 
 
 4. **Failover and Recovery**:
    Pacemaker will automatically manage failover based on your configuration, ensuring high availability of your resources.
+
 
 ## Contribution
 
