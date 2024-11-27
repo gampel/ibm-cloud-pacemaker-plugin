@@ -42,7 +42,7 @@ Pacemaker is an open-source high-availability (HA) cluster resource manager wide
 
    ```bash
    cd ibm-cloud-pacemaker-plugin
-   make install 
+   make install_all 
    ```
    Currently, only apt-get (Ubuntu) based install is supported
 
@@ -186,12 +186,13 @@ vpc_url  =  `The VPC URL to be used can be the Public VPC API endpoint for your 
    Replace `MyResource` and `[property=value]` with your resource name and properties accordingly.
 
 3. **Monitor and Manage Resources**:
-   You can monitor and manage your resources using standard Pacemaker commands:
+   You can monitor and manage your resources using standard Pacemaker commands: 
 
-   ```bash
-   pcs status
-   pcs resource show
-   ```
+    pcs status
+>  
+    pcs resource show
+>  
+    crm mon 
 
 4. **Failover and Recovery**:
    Pacemaker will automatically manage failover based on your configuration, ensuring high availability of your resources.
@@ -220,4 +221,5 @@ To send this as a pull request (PR) to the repository:
 6. Select your fork and compare it with the base repository, then create the pull request.
 
 Feel free to adjust any sections according to your preferences or additional information you may want to include!
+
 
