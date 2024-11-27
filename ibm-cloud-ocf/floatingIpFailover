@@ -186,10 +186,10 @@ fip_monitor()
 fip_start()
 {
 	ocf_log info ">>>>>>>>>> fip_start: :$remote_vni_id:$local_vni_id:$fip_id:  $OCF_SUCCESS"
-	ocf_log info "python3 /root/ibm-cloud-pacemaker-plugin/scripts/ibm-cloud-pacemaker-fail-over.py FIP remove $remote_vni_id $fip_id"
-	ocf_log info "python3 /root/ibm-cloud-pacemaker-plugin/scripts/ibm-cloud-pacemaker-fail-over.py FIP add $remote_vni_id $fip_id"
-  	python3 /root/ibm-cloud-pacemaker-plugin/scripts/ibm-cloud-pacemaker-fail-over.py FIP remove $remote_vni_id $fip_id 
-  	python3 /root/ibm-cloud-pacemaker-plugin/scripts/ibm-cloud-pacemaker-fail-over.py FIP add  $local_vni_id $fip_id 
+	ocf_log info "Calling ibm-cloud-pacemaker-fail-over.py FIP remove $remote_vni_id $fip_id"
+	ocf_log info "Calling ibm-cloud-pacemaker-fail-over.py FIP add $remote_vni_id $fip_id"
+  	ibm-cloud-pacemaker-fail-over.py FIP remove $remote_vni_id $fip_id 
+  	ibm-cloud-pacemaker-fail-over.py FIP add  $local_vni_id $fip_id 
 	exit $OCF_SUCCESS
 }
 
