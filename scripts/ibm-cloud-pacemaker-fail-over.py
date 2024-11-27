@@ -48,7 +48,7 @@ class HAFailOver(object):
     ext_ip_1 = ''
     ext_ip_2 = ''
     DEBUG = False 
-    DEBUG = True 
+    #DEBUG = True 
     service = None
     
     def __init__(self):
