@@ -175,7 +175,7 @@ class HAFailOver(object):
                 list_tables = self.service.list_vpc_routing_tables(self.vpc_id).get_result()['routing_tables']
                 self.logger("Here 1.3")
         except Exception as e:
-            print("List VPC routing table failed with status code " + str(e.code) + ": " + e.message)
+            print(e)
             return False
         update_done = False
         self.logger("Iterating through below Table Name and Table ID!!")
