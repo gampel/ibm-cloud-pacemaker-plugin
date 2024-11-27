@@ -7,7 +7,7 @@ sudo apt-get install haveged
 sudo corosync-keygen
 sudo apt-get remove --purge haveged
 sudo apt-get clean
-
+apt -y install pcs
 
 echo "Please copy authkey to secound ip sudo scp /etc/corosync/authkey username@secondary_ip:/tmp"
 sudo corosync-cmapctl | grep members
