@@ -5,11 +5,11 @@ sudo apt-get -y install python3
 sudo apt-get -y install pip
 sudo python -m pip install --upgrade ibm-cloud-sdk-core
 sudo python3 -m pip install --upgrade ibm-vpc
-sudo -y apt-get install  python3-dotenv
-sudo -y apt-get install haveged
+sudo apt-get -y install  python3-dotenv
+sudo apt-get -y install haveged
 sudo corosync-keygen
-sudo -y apt-get remove --purge haveged
-sudo -y apt-get clean
-
+sudo apt-get -y remove --purge haveged
+sudo apt-get -y clean
+sudo apt-get -y install jq
 echo "Please copy authkey to secound ip sudo scp /etc/corosync/authkey username@secondary_ip:/tmp"
 sudo corosync-cmapctl | grep members
