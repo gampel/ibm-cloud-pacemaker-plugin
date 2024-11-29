@@ -1,5 +1,6 @@
 
 
+install: install_all
 
 install_all: install_deps install_plugin
 
