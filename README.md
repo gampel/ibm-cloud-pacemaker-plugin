@@ -46,6 +46,7 @@ Active Passive mode, providing an easy way to deploy cloud-based applications in
    Navigate into the cloned directory and build the plugin:
 
    ```bash
+   sudo apt-get install make
    cd ibm-cloud-pacemaker-plugin
    make install_all 
    ```
