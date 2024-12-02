@@ -127,7 +127,7 @@ ibm_vpc_cr_monitor()
 {
   active_ip=$(ibm-cloud-pacemaker-fail-over.py ROUTE GET)
   cmd="ip a"
-  ocf_log debug "executing command: $cmd active_ip: $active_ip"
+  ocf_log info "executing command: $cmd active_ip: $active_ip"
   RESULT=$($cmd | grep "$active_ip") 
   if [ -z "$RESULT" ]; then
   	  ocf_log info "Passive return $OCF_NOT_RUNNING"

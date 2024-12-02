@@ -197,7 +197,7 @@ fip_start()
 fip_stop()
 {
 	ocf_log info ">>>>>>>>>> fip_start: :$FIP_IP: $OCF_SUCCESS"
-  	python3 /root/ibm-cloud-pacemaker-plugin/scripts/ibm-cloud-pacemaker-fail-over.py FIP remove local_vni_id fip_id 
+  	ibm-cloud-pacemaker-fail-over.py FIP remove local_vni_id fip_id 
 	exit $OCF_SUCCESS
 }
 
