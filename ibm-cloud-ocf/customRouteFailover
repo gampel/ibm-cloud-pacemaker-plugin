@@ -133,7 +133,7 @@ ibm_vpc_cr_monitor()
   	  ocf_log info "Passive return $OCF_NOT_RUNNING"
   	  exit $OCF_NOT_RUNNING
   fi
-  ocf_log debug "Active return $OCF_SUCCESS"
+  ocf_log info "Active return $OCF_SUCCESS"
   exit $OCF_SUCCESS
 
 }
