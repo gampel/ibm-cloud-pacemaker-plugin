@@ -1,6 +1,7 @@
 
 
 
+
 ```markdown
 # IBM Cloud VPC Pacemaker Plugin
 
@@ -250,7 +251,7 @@ The customRouteFailover  Plugin will seamlessly figure out if the VNI pair are o
 4. **Failover and Recovery**:
    Pacemaker will automatically manage failover based on your configuration, ensuring high availability of your resources.
 
-5. **Setup How to Test **:
+5. **Setup How to Test**:
 
 Configure two VSIs in the IBM Cloud, and make sure you have instance metadata enabled for both.
 Do the setup above.
@@ -280,8 +281,8 @@ For Example
       corosync: active/enabled
       pacemaker: active/enabled
       pcsd: active/enabled
+6. **TODO**:
 
- - **TODO **:
  - Support Secondary ips failover 
  - Support PAR 
  - Support Using a trusted profile to call IAM-enabled services (no need for API key)
