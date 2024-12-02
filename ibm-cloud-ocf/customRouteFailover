@@ -114,11 +114,11 @@ get_params()
 		export EXT_IP_2=${OCF_RESKEY_ext_ip_2}
 	fi
 	OCF_IBM_auth_type_default="key"
-	instance_identity_token=$(curl -X PUT "http://169.254.169.254/instance_identity/v1/token?version=2022-03-08" -H "Metadata-Flavor: ibm" -d '{ "expires_in": 3600 }' | jq -r .access_token)
-	#export instance_primary_ip=$(curl -X GET "http://169.254.169.254/metadata/v1/instance/network_interfaces?version=2022-05-24" -H "Authorization: Bearer $instance_identity_token" | jq -r .network_interfaces[0].primary_ipv4_address)
-	#FIP_IP=$(curl -X GET "http://169.254.169.254/metadata/v1/instance/network_interfaces?version=2022-05-24" -H "Authorization: Bearer $instance_identity_token" | jq -r .network_interfaces[0].floating_ips[0].address)
-	export VPC_ID=$(curl -X GET "http://169.254.169.254/metadata/v1/instance?version=2022-05-24" -H "Authorization: Bearer $instance_identity_token" | jq -r .vpc.id) 
-	export VSI_LOCAL_AZ=$(curl -X GET "http://169.254.169.254/metadata/v1/instance?version=2022-05-24" -H "Authorization: Bearer $instance_identity_token" | jq -r .zone.name) 
+	instance_identity_token=$(curl -s -X PUT "http://169.254.169.254/instance_identity/v1/token?version=2022-03-08" -H "Metadata-Flavor: ibm" -d '{ "expires_in": 3600 }' | jq -r .access_token)
+	#export instance_primary_ip=$(curl -s -X GET "http://169.254.169.254/metadata/v1/instance/network_interfaces?version=2022-05-24" -H "Authorization: Bearer $instance_identity_token" | jq -r .network_interfaces[0].primary_ipv4_address)
+	#FIP_IP=$(curl -s -X GET "http://169.254.169.254/metadata/v1/instance/network_interfaces?version=2022-05-24" -H "Authorization: Bearer $instance_identity_token" | jq -r .network_interfaces[0].floating_ips[0].address)
+	export VPC_ID=$(curl -s -X GET "http://169.254.169.254/metadata/v1/instance?version=2022-05-24" -H "Authorization: Bearer $instance_identity_token" | jq -r .vpc.id) 
+	export VSI_LOCAL_AZ=$(curl -s -X GET "http://169.254.169.254/metadata/v1/instance?version=2022-05-24" -H "Authorization: Bearer $instance_identity_token" | jq -r .zone.name) 
 
 
 }

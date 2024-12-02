@@ -154,9 +154,9 @@ get_params()
 	fi
 
 
-	instance_identity_token=$(curl -X PUT "http://169.254.169.254/instance_identity/v1/token?version=2022-03-08" -H "Metadata-Flavor: ibm" -d '{ "expires_in": 3600 }' | jq -r .access_token)
-	local_vni_id=$(curl -X GET "http://169.254.169.254/metadata/v1/instance/network_attachments?version=2024-11-19" -H "Authorization: Bearer $instance_identity_token" | jq -r .network_attachments[0].virtual_network_interface.id)
-	FIP_IP=$(curl -X GET "http://169.254.169.254/metadata/v1/instance/network_interfaces?version=2022-05-24" -H "Authorization: Bearer $instance_identity_token" | jq -r .network_interfaces[0].floating_ips[0].address)
+	instance_identity_token=$(curl -s -X PUT "http://169.254.169.254/instance_identity/v1/token?version=2022-03-08" -H "Metadata-Flavor: ibm" -d '{ "expires_in": 3600 }' | jq -r .access_token)
+	local_vni_id=$(curl -s -X GET "http://169.254.169.254/metadata/v1/instance/network_attachments?version=2024-11-19" -H "Authorization: Bearer $instance_identity_token" | jq -r .network_attachments[0].virtual_network_interface.id)
+	FIP_IP=$(curl -s -X GET "http://169.254.169.254/metadata/v1/instance/network_interfaces?version=2022-05-24" -H "Authorization: Bearer $instance_identity_token" | jq -r .network_interfaces[0].floating_ips[0].address)
 	remote_vni_id=""
 	ocf_log info ">>>>>>>>>> API_KEY:$API_KEY:local_vni :$local_vni_id:$vni_id_1:$vni_id_2::$OCF_SUCCESS"
 	if [ "$local_vni_id" = "$vni_id_1" ]; then 
@@ -167,7 +167,7 @@ get_params()
 	fi
 	
 	ocf_log info ">>>>>>>>>> remote_vni_id :$remote_vni_id:  $OCF_SUCCESS"
-	if [ "$remote_vni_id" -eq "" ]; then 
+	if [ "$remote_vni_id" = "" ]; then
 		ocf_log err "Error. Local VNI ID $local_vni_id does not match $OCF_RESKEY_vni_id_2 or $OCF_RESKEY_vni_id_1"
 		exit $OCF_ERR_GENERIC
 	fi
