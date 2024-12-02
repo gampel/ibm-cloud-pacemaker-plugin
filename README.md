@@ -4,15 +4,19 @@
 ```markdown
 # IBM Cloud VPC Pacemaker Plugin
 
-This repository contains the IBM Cloud Pacemaker Plugins, which provides integration between IBM Cloud and the Pacemaker
-cluster resource manager. The plugin enables you to manage cloud resources and deployment within Pacemaker, allowing high
-availability for your applications in the IBM VPC Cloud environment.
+This repository contains the IBM Cloud Pacemaker Plugins, which provides
+integration between IBM Cloud and the Pacemaker cluster resource manager.
+The plugin enables you to manage cloud resources and deployment within
+Pacemaker, allowing high availability for your applications in the
+IBM VPC Cloud environment.
 
 ## Background
 
-Pacemaker is an open-source high-availability (HA) cluster resource manager widely used for managing cluster resources.
-The IBM Cloud Pacemaker Plugin extends Pacemaker’s capabilities by adding support for managing IBM Cloud resources in
-Active Passive mode, providing an easy way to deploy cloud-based applications in a high-availability setup.
+Pacemaker is an open-source high-availability (HA) cluster resource manager
+widely used for managing cluster resources. The IBM Cloud Pacemaker Plugin
+extends Pacemaker’s capabilities by adding support for managing IBM Cloud
+resources in Active Passive mode, providing an easy way to deploy cloud-based
+applications in a high-availability setup.
 
 ## Features
 
