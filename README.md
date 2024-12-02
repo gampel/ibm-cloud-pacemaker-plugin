@@ -1,5 +1,6 @@
 
 
+
 ```markdown
 # IBM Cloud VPC Pacemaker Plugin
 
@@ -48,7 +49,7 @@ Active Passive mode, providing an easy way to deploy cloud-based applications in
    ```bash
    sudo apt-get install make
    cd ibm-cloud-pacemaker-plugin
-   make install_all 
+   make install 
    ```
    Currently, only apt-get (Ubuntu) based install is supported
 
@@ -116,6 +117,7 @@ Now we nee to restart corosyn of both VSIs
 Set stonith to false on both VSI's
 
     pcs property set stonith-enabled=false
+    pcs property set  no-quorum-policy=ignore 
 
 Run pcs status you should get the following: 
 
@@ -158,7 +160,9 @@ For example:
                         api_key="API_KEY" \
                         ext_ip_1="IP_1"   \
                         ext_ip_2="IP_2"   \
-                        vpc_url="https://eu-es.iaas.cloud.ibm.com/v1"
+                        vpc_url="https://eu-es.iaas.cloud.ibm.com/v1" \
+                        meta resource-stickiness=100 stonith-enabled=false  \
+                         no-quorum-policy=ignore 
    ```
    
 
@@ -172,13 +176,18 @@ ext_ip_2 =  `Private IP for the second VSI`
  
 vpc_url  =  `The VPC URL to be used can be the Public VPC API endpoint for your region or VPE (private path) to your regional VPC API endpoint.
     `
+   
+    Adjust resource stickiness depending on your  preference for auto failback, using the above value, the resource prefers to stay where it is after failover 
+    
 ```bash   
 pcs resource create  floatingIpFailover  ocf:ibm-cloud:floatingIpFailover  \
                        api_key="API_KEY" \
                        vni_id_1="02w7-afc89131-7901-4603-848a-5488680c683d" \
                        vni_id_2="02w7-c0f2ff9b-3128-4d91-ab32-7d612659867d" \
                        fip_id="r050-f0e45301-f07d-4117-86b7-dd0ea60e5b9f" \
-                       vpc_url="https://eu-es.iaas.cloud.ibm.com/v1"
+                       vpc_url="https://eu-es.iaas.cloud.ibm.com/v1" \
+                       meta resource-stickiness=100 stonith-enabled=false  \
+                         no-quorum-policy=ignore 
    ```
   api_key =  `IBM Cloud API Key Your VPC Access API key`  
  
@@ -237,6 +246,42 @@ The customRouteFailover  Plugin will seamlessly figure out if the VNI pair are o
 4. **Failover and Recovery**:
    Pacemaker will automatically manage failover based on your configuration, ensuring high availability of your resources.
 
+5. **Setup How to Test **:
+
+Configure two VSIs in the IBM Cloud, and make sure you have instance metadata enabled for both.
+Do the setup above.
+To test the FIP plugin please attache FIP to one of the VISs and start testing the failover 
+To test Custom route VIP, please configure IBM Cloud Egress and Ingress custom route for the prefixes you want to redirect to the HA cluster and set one of the VSI ip as the next on ALL the routes.
+The two plugins can work together, but you must make sure that FIP and Custom route nexthop are pointing to the same VSI on startup 
+For Example 
+
+    root@eran-new-test2:~# pcs status
+    Cluster name: IBM-cluster
+    Cluster Summary:
+      * Stack: corosync
+      * Current DC: secondary (version 2.1.2-ada5c3b36e2) - partition with quorum
+      * Last updated: Mon Dec  2 18:29:57 2024
+      * Last change:  Mon Dec  2 18:19:11 2024 by root via cibadmin on primary
+      * 2 nodes configured
+      * 2 resource instances configured
+    
+    Node List:
+      * Online: [ primary secondary ]
+    
+    Full List of Resources:
+      * floatingIpFailover	(ocf:ibm-cloud:floatingIpFailover):	 Started secondary
+      * customRouteFailover	(ocf:ibm-cloud:customRouteFailover):	 Started secondary
+    
+    Daemon Status:
+      corosync: active/enabled
+      pacemaker: active/enabled
+      pcsd: active/enabled
+
+ - **TODO **:
+ - Support Secondary ips failover 
+ - Support PAR 
+ - Support Using a trusted profile to call IAM-enabled services (no need for API key)
+ - Support encrypted  IBM instance metadata access  
 
 ## Contribution
 
