@@ -1,0 +1,15 @@
+sudo yum -y update
+sudo yum -y install pacemaker
+sudo yum -y install pcs
+sudo yum -y install python3
+sudo yum -y install pip
+sudo python -m pip install --upgrade ibm-cloud-sdk-core
+sudo python3 -m pip install --upgrade ibm-vpc
+sudo yum -y install  python3-dotenv
+sudo yum -y install haveged
+sudo corosync-keygen
+sudo yum -y remove --purge haveged
+sudo yum -y clean
+sudo yum -y install jq
+echo "Please copy authkey to secound ip sudo scp /etc/corosync/authkey username@secondary_ip:/tmp"
+sudo corosync-cmapctl | grep members

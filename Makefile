@@ -5,7 +5,7 @@ install: install_all
 install_all: install_deps install_plugin
 
 install_deps:
-	./install.Ubuntu
+	./install.sh
 
 install_plugin:
 	mkdir -p /usr/lib/ocf/resource.d/ibm-cloud/
