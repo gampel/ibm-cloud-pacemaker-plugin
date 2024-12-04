@@ -123,9 +123,6 @@ get_params()
 {
 	if [ -n "$OCF_RESKEY_api_key" ]; then
 		export API_KEY=${OCF_RESKEY_api_key}
-	else
-		ocf_log info "You need to specify teh api key to be used"
-		return $OCF_ERR_ARGS
 	fi
 	if [ -n "$OCF_RESKEY_vpc_url" ]; then
 		export VPC_URL=${OCF_RESKEY_vpc_url}
