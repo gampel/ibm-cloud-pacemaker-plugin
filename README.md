@@ -23,6 +23,7 @@ applications in a high-availability setup.
 	- Custom route VIP,  active passive same AZ or Cross/Multi-AZ  
 	- Floating IP Failover (Singel AZ)
 - Supports easy configuration and deployment.
+- Support Trusted profile IAM token or API key based 
 
 ## Prerequisites
 
@@ -166,7 +167,7 @@ For example:
    ```
    
 
- 
+In case you want to use a Trusted profile IAM token do not include optional api_key parameter
 
 api_key = `[IBM Cloud API Key](https://cloud.ibm.com/docs/account?topic=account-userapikey&interface=ui) Your VPC Access API key` 
  
@@ -189,7 +190,10 @@ pcs resource create  floatingIpFailover  ocf:ibm-cloud:floatingIpFailover  \
                        meta resource-stickiness=100 stonith-enabled=false  \
                          no-quorum-policy=ignore 
    ```
-  api_key =  `IBM Cloud API Key Your VPC Access API key`  
+
+  In case you want to use a Trusted profile IAM token do not include api_key parameter
+  
+api_key =  `IBM Cloud API Key Your VPC Access API key`  
  
 vni_id_1 = `First Virtual Network Interface (VNI) uuid`
 
@@ -279,8 +283,7 @@ For Example
 6. **TODO**:
 
  - Support Secondary ips failover 
- - Support PAR 
- - Support Using a trusted profile to call IAM-enabled services (no need for API key)
+ - Support Public Adress Prefix
  - Support encrypted  IBM instance metadata access  
 
 ## Contribution
