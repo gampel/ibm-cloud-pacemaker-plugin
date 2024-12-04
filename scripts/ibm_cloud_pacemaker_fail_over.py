@@ -16,7 +16,7 @@
 
 import sys
 from ibm_vpc import VpcV1
-from ibm_cloud_sdk_core.authenticators import IAMAuthenticator
+from ibm_cloud_sdk_core.authenticators import BearerTokenAuthenticator
 from os import environ as env
 from dotenv import load_dotenv
 import http.client
@@ -37,6 +37,11 @@ class HAFailOver(object):
     EXT_IP_2 = "EXT_IP_2"
     EXT_IP_1_ZONE = ""
     EXT_IP_2_ZONE = ""
+    HTTP = "HTTP"
+    HTTPS = "HTTPS"
+    METADATA_VERSION = "2022-03-01"
+    METADATA_HOST = "api.metadata.cloud.ibm.com"
+    METADATA_PATH = "/instance_identity/v1/"
     apikey = None
     vpc_url = ""
     vpc_id = ""
@@ -65,6 +70,70 @@ class HAFailOver(object):
         # self.logger("Initialized VPC service!!" + access_token)
 
     def get_token(self):
+        if self.apikey is not None:
+            self.logger("------apikey path")
+            return self._get_token_from_apikey()
+        else:
+            self.logger("------trusted profile path")
+            return self._get_token_from_tp()
+        
+    def _get_token_from_tp(self):
+        connection = self._get_metadata_connection()
+        return self._get_iam_token_from_tp(connection)
+        
+    def _get_iam_token_from_tp(self, connection: http.client.HTTPSConnection):
+        metadata_token = self._get_metadata_token(connection)
+        connection.request("POST", 
+                           self._get_metadata_iam_token_path(), 
+                           headers=self._get_metadata_headers_iam(metadata_token))
+        response = json.loads(connection.getresponse().read().decode("utf-8"))
+        if 'access_token' not in response:
+            self.logger(response)
+            self.logger('Can not get access token from trusted profile. Review if a TP is bound to the instance.')
+            raise Exception('Can not get access token from trusted profile. Review if a TP is bound to the instance.')
+        return f"Bearer {response['access_token']}"
+
+    def _get_metadata_token(self, connection: http.client.HTTPSConnection):
+        connection.request("PUT", 
+                           self._get_metadata_token_path(),
+                           body=self._get_metadata_body(), 
+                           headers=self._get_metadata_headers())
+        return json.loads(connection.getresponse().read().decode("utf-8"))['access_token']
+        
+    def _get_metadata_token_path(self):
+        return f"{self.METADATA_PATH}token?version={self.METADATA_VERSION}"
+    
+    def _get_metadata_iam_token_path(self):
+        return f"{self.METADATA_PATH}iam_token?version={self.METADATA_VERSION}"
+
+    def _get_metadata_body(self):
+        return json.dumps({
+            "expires_in": 3600
+        })
+
+    def _get_metadata_headers(self) -> dict:
+        return {
+            'Metadata-Flavor': 'ibm',
+            'Accept': 'application/json'
+        }
+    
+    def _get_metadata_headers_iam(self, metadata_token) -> dict:
+        headers = self._get_metadata_headers()
+        headers['Authorization'] = f"Bearer {metadata_token}"
+        return headers
+        
+    def _get_metadata_connection(self):
+        connection = None
+        if self._check_connectivity(self.METADATA_HOST, 80):
+            connection = http.client.HTTPConnection(self.METADATA_HOST)
+        elif self._check_connectivity(self.METADATA_HOST, 443):
+            connection = http.client.HTTPSConnection(self.METADATA_HOST)
+        if connection is None:
+            self.logger("Activate metadata at VSI instance please! and be sure that a TP is bound to the instance")
+            raise Exception("Activate metadata at VSI instance please! and be sure that a TP is bound to the instance")
+        return connection        
+
+    def _get_token_from_apikey(self):
         # URL for token
         conn = http.client.HTTPSConnection("iam.cloud.ibm.com")
         # Payload for retrieving token. Note: An API key will need to be generated and replaced here
@@ -100,6 +169,18 @@ class HAFailOver(object):
             self.logger(f"Error getting token. {error}")
             raise
 
+    def _check_connectivity(self, ip, port):
+        import socket
+        try:
+            with socket.create_connection((ip, port), 5):
+                self.logger(f"Successfully connected to {ip}:{port}")
+                return True
+        except socket.timeout:
+            self.logger(f"Connection to {ip}:{port} timed out.")
+        except socket.error as e:
+            self.logger(f"Failed to connect to {ip}:{port}: {e}")
+        return False
+
     def parameterException(missingParameter):
         raise Exception("Please!!! provide " + missingParameter)
 
@@ -109,8 +190,6 @@ class HAFailOver(object):
             if self.API_KEY in env:
                 self.apikey = env[self.API_KEY]
                 self.logger(self.API_KEY + ": " + self.apikey)
-            else:
-                self.parameterException(self.API_KEY)
 
             if self.VPC_ID in env:
                 self.vpc_id = env[self.VPC_ID]
@@ -146,9 +225,9 @@ class HAFailOver(object):
         self.logger("VPC URL: " + self.vpc_url)
         self.logger("VPC self.ext_ip_1: " + self.ext_ip_1)
         self.logger("VPC self.ext_ip_2: " + self.ext_ip_2)
-        self.logger("VPC self.api_key: " + self.apikey)
+        self.logger("VPC self.api_key: " + str(self.apikey))
         self.logger("cmd: " + cmd)
-        authenticator = IAMAuthenticator(self.apikey, url="https://iam.cloud.ibm.com")
+        authenticator = BearerTokenAuthenticator(self.get_token())
         self.service = VpcV1(authenticator=authenticator)
         self.service.set_service_url(self.vpc_url)
         ret = ""
@@ -163,6 +242,7 @@ class HAFailOver(object):
                 ).get_result()
         except Exception as e:
             print(e)
+            raise e
         print(ret)
         return True
 
@@ -172,9 +252,9 @@ class HAFailOver(object):
         self.logger("VPC URL: " + self.vpc_url)
         self.logger("VPC self.ext_ip_1: " + self.ext_ip_1)
         self.logger("VPC self.ext_ip_2: " + self.ext_ip_2)
-        self.logger("VPC self.api_key: " + self.apikey)
+        self.logger("VPC self.api_key: " + str(self.apikey))
         list_tables = ""
-        authenticator = IAMAuthenticator(self.apikey, url="https://iam.cloud.ibm.com")
+        authenticator = BearerTokenAuthenticator(self.get_token())
         self.service = VpcV1(authenticator=authenticator)
         self.service.set_service_url(self.vpc_url)
         try:
@@ -338,6 +418,6 @@ if __name__ == "__main__":
             fail_over(sys.argv[2])
     else:
         print(
-            "Error must provide parameter usage: ibm-cloud-pacemaker-fail-over.py ROUTE GET|SET"
+            "Error must provide parameter usage: ibm_cloud_pacemaker_fail_over.py ROUTE GET|SET"
         )
         usage_fip()

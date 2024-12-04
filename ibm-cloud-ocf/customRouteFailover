@@ -101,8 +101,6 @@ get_params()
 {
 	if [ -n "$OCF_RESKEY_api_key" ]; then
 		export API_KEY=${OCF_RESKEY_api_key}
-	else
-		ocf_log info "You need to specify api_key"
 	fi
 	if [ -n "$OCF_RESKEY_vpc_url" ]; then
 		export VPC_URL=${OCF_RESKEY_vpc_url}
@@ -125,7 +123,7 @@ get_params()
 
 ibm_vpc_cr_monitor()
 {
-  active_ip=$(ibm-cloud-pacemaker-fail-over.py ROUTE GET)
+  active_ip=$(ibm_cloud_pacemaker_fail_over.py ROUTE GET)
   cmd="ip a"
   ocf_log info "executing command: $cmd active_ip: $active_ip"
   RESULT=$($cmd | grep "$active_ip") 
@@ -141,7 +139,7 @@ ibm_vpc_cr_monitor()
 ibm_vpc_cr_start()
 {
 	ocf_log info ">>>>>>>>>> ibm_vpc_cr_start: :$VSI_LOCAL_AZ:  $OCF_SUCCESS"
-  	ibm-cloud-pacemaker-fail-over.py ROUTE SET
+  	ibm_cloud_pacemaker_fail_over.py ROUTE SET
 	exit $OCF_SUCCESS
 }
 

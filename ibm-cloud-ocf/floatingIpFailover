@@ -123,9 +123,6 @@ get_params()
 {
 	if [ -n "$OCF_RESKEY_api_key" ]; then
 		export API_KEY=${OCF_RESKEY_api_key}
-	else
-		ocf_log info "You need to specify teh api key to be used"
-		return $OCF_ERR_ARGS
 	fi
 	if [ -n "$OCF_RESKEY_vpc_url" ]; then
 		export VPC_URL=${OCF_RESKEY_vpc_url}
@@ -186,10 +183,10 @@ fip_monitor()
 fip_start()
 {
 	ocf_log info ">>>>>>>>>> fip_start: :$remote_vni_id:$local_vni_id:$fip_id:  $OCF_SUCCESS"
-	ocf_log info "Calling ibm-cloud-pacemaker-fail-over.py FIP remove $remote_vni_id $fip_id"
-	ocf_log info "Calling ibm-cloud-pacemaker-fail-over.py FIP add $remote_vni_id $fip_id"
-  	ibm-cloud-pacemaker-fail-over.py FIP remove $remote_vni_id $fip_id 
-  	ibm-cloud-pacemaker-fail-over.py FIP add  $local_vni_id $fip_id 
+	ocf_log info "Calling ibm_cloud_pacemaker_fail_over.py FIP remove $remote_vni_id $fip_id"
+	ocf_log info "Calling ibm_cloud_pacemaker_fail_over.py FIP add $remote_vni_id $fip_id"
+  	ibm_cloud_pacemaker_fail_over.py FIP remove $remote_vni_id $fip_id 
+  	ibm_cloud_pacemaker_fail_over.py FIP add  $local_vni_id $fip_id 
 	exit $OCF_SUCCESS
 }
 
@@ -197,7 +194,7 @@ fip_start()
 fip_stop()
 {
 	ocf_log info ">>>>>>>>>> fip_start: :$FIP_IP: $OCF_SUCCESS"
-  	ibm-cloud-pacemaker-fail-over.py FIP remove local_vni_id fip_id 
+  	ibm_cloud_pacemaker_fail_over.py FIP remove local_vni_id fip_id 
 	exit $OCF_SUCCESS
 }
 
