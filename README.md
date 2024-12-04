@@ -1,8 +1,3 @@
-
-
-
-
-```markdown
 # IBM Cloud VPC Pacemaker Plugin
 
 This repository contains the IBM Cloud Pacemaker Plugins, which provides
