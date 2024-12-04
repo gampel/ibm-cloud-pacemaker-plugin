@@ -1,8 +1,3 @@
-
-
-
-
-```markdown
 # IBM Cloud VPC Pacemaker Plugin
 
 This repository contains the IBM Cloud Pacemaker Plugins, which provides
@@ -66,7 +61,7 @@ applications in a high-availability setup.
 Example Configuration is provided in [corosync.conf](https://github.com/gampel/ibm-cloud-pacemaker-plugin/blob/main/conf/corosync.conf)
   
 
-        totem {
+    totem {
       version: 2
       cluster_name: IBM-cluster
       transport: udpu
