@@ -54,7 +54,7 @@ class HAFailOver(object):
     mgmt_ip_2 = ""
     ext_ip_1 = ""
     ext_ip_2 = ""
-    DEBUG = True
+    DEBUG = False
     # DEBUG = True
     service = None
 
