@@ -418,6 +418,6 @@ if __name__ == "__main__":
             fail_over(sys.argv[2])
     else:
         print(
-            "Error must provide parameter usage: ibm-cloud-pacemaker-fail-over.py ROUTE GET|SET"
+            "Error must provide parameter usage: ibm_cloud_pacemaker_fail_over.py ROUTE GET|SET"
         )
         usage_fip()
