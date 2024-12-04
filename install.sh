@@ -16,13 +16,13 @@ echo "> OS $os_name:$os_version"
 if command -v apt-get >/dev/null; then
   echo "> apt-get is used here"
   if [ "$os_version" == "24.04" ] && [ "$os_name" == "Ubuntu" ]; then
-     ./install/install.Ubuntu.24.04
+     ./distributions/install.Ubuntu.24.04
   else
-     ./install/install.Ubuntu.default
+     ./distributions/install.Ubuntu.default
   fi
 elif command -v yum >/dev/null; then
   echo "> yum is used here"
-  ./install/install.yum
+  ./distributions/install.yum
 else
   echo "> no support for yum or apt-get"
 fi
