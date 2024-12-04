@@ -3,7 +3,7 @@ sudo apt-get -y install pacemaker
 sudo apt-get -y install pcs
 sudo apt-get -y install python3
 sudo apt-get -y install pip
-sudo apt-get remove python3-urllib3
+sudo apt-get -y remove python3-urllib3
 sudo python3 -m pip install --break-system-packages --upgrade ibm-cloud-sdk-core
 sudo python3 -m pip install --break-system-packages --upgrade ibm-vpc
 sudo apt-get -y install python3-dotenv
