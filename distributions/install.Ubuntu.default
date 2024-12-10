@@ -13,3 +13,5 @@ sudo apt-get -y clean
 sudo apt-get -y install jq
 echo "Please copy authkey to secound ip sudo scp /etc/corosync/authkey username@secondary_ip:/tmp"
 sudo corosync-cmapctl | grep members
+sudo apt-get install resource-agents-base
+sudo apt-get install resource-agents-extra
