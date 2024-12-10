@@ -1,4 +1,4 @@
-#!/usr/bin/env python3 
+#!/usr/bin/env python3
 
 # Copyright 2024 Eran Gampel
 #
@@ -13,21 +13,32 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+"""Module providing IBM Fail over functions ."""
 import sys
+import json
+import http.client
+import socket
+from os import environ as env
 from ibm_vpc import VpcV1
 from ibm_cloud_sdk_core.authenticators import BearerTokenAuthenticator
-from os import environ as env
+from ibm_cloud_sdk_core import ApiException
 from dotenv import load_dotenv
-import http.client
-import json
 
 
 load_dotenv("env")
 
+class HAFailOver():
+    """_summary_
 
-class HAFailOver(object):
-    # Parameter to be passed while creating a Code Engine Instance.
+    Raises:
+        ApiException: _description_
+        ApiException: _description_
+        an: _description_
+        ApiException: _description_
+
+    Returns:
+        _type_: _description_
+    """
     API_KEY = "API_KEY"
     VPC_ID = "VPC_ID"
     VPC_URL = "VPC_URL"
@@ -35,10 +46,6 @@ class HAFailOver(object):
     VSI_LOCAL_AZ = "VSI_LOCAL_AZ"
     EXT_IP_1 = "EXT_IP_1"
     EXT_IP_2 = "EXT_IP_2"
-    EXT_IP_1_ZONE = ""
-    EXT_IP_2_ZONE = ""
-    HTTP = "HTTP"
-    HTTPS = "HTTPS"
     METADATA_VERSION = "2022-03-01"
     METADATA_HOST = "api.metadata.cloud.ibm.com"
     METADATA_PATH = "/instance_identity/v1/"
@@ -50,19 +57,20 @@ class HAFailOver(object):
     zone = ""
     next_hop_vsi = ""
     update_next_hop_vsi = ""
-    mgmt_ip_1 = ""
-    mgmt_ip_2 = ""
     ext_ip_1 = ""
     ext_ip_2 = ""
+    vsi_local_az = ""
     DEBUG = False
-    # DEBUG = True
+    #DEBUG = True
     service = None
 
     def __init__(self):
+        """_summary_
+        """
         self.logger("--------Constructor---------")
         if self.apikey is None:
-            self.logger("--------parse_config")
-            self.parse_config()
+            self.logger("--------_parse_config")
+            self._parse_config()
         # authenticator = IAMAuthenticator(self.apikey, url='https://iam.cloud.ibm.com')
         # self.service = VpcV1(authenticator=authenticator)
         # self.service.set_service_url(self.vpc_url)
@@ -70,70 +78,144 @@ class HAFailOver(object):
         # self.logger("Initialized VPC service!!" + access_token)
 
     def get_token(self):
+        """Get Token
+
+        Returns:
+        string:Returning the acsess token
+
+        """
         if self.apikey is not None:
             self.logger("------apikey path")
             return self._get_token_from_apikey()
-        else:
-            self.logger("------trusted profile path")
-            return self._get_token_from_tp()
-        
+        self.logger("------trusted profile path")
+        return self._get_token_from_tp()
+
     def _get_token_from_tp(self):
+        """_summary_
+
+        Returns:
+            _type_: _description_
+        """
         connection = self._get_metadata_connection()
         return self._get_iam_token_from_tp(connection)
-        
+
     def _get_iam_token_from_tp(self, connection: http.client.HTTPSConnection):
+        """_summary_
+
+        Args:
+            connection (http.client.HTTPSConnection): _description_
+
+        Raises:
+            ApiException: _description_
+
+        Returns:
+            _type_: _description_
+        """
         metadata_token = self._get_metadata_token(connection)
-        connection.request("POST", 
-                           self._get_metadata_iam_token_path(), 
+        connection.request("POST",
+                           self._get_metadata_iam_token_path(),
                            headers=self._get_metadata_headers_iam(metadata_token))
         response = json.loads(connection.getresponse().read().decode("utf-8"))
         if 'access_token' not in response:
             self.logger(response)
-            self.logger('Can not get access token from trusted profile. Review if a TP is bound to the instance.')
-            raise Exception('Can not get access token from trusted profile. Review if a TP is bound to the instance.')
+            self.logger('Can not get access token from trusted profile.'
+                        'Review if a TP is bound to the instance.')
+            raise ApiException('Can not get access token from trusted profile.'
+                            'Review if a TP is bound to the instance.')
         return f"Bearer {response['access_token']}"
 
     def _get_metadata_token(self, connection: http.client.HTTPSConnection):
-        connection.request("PUT", 
+        """_summary_
+
+        Args:
+            connection (http.client.HTTPSConnection): _description_
+
+        Returns:
+            _type_: _description_
+        """
+        connection.request("PUT",
                            self._get_metadata_token_path(),
-                           body=self._get_metadata_body(), 
+                           body=self._get_metadata_body(),
                            headers=self._get_metadata_headers())
         return json.loads(connection.getresponse().read().decode("utf-8"))['access_token']
-        
+
     def _get_metadata_token_path(self):
+        """_summary_
+
+        Returns:
+            _type_: _description_
+        """
         return f"{self.METADATA_PATH}token?version={self.METADATA_VERSION}"
-    
+
     def _get_metadata_iam_token_path(self):
+        """_summary_
+
+        Returns:
+            _type_: _description_
+        """
         return f"{self.METADATA_PATH}iam_token?version={self.METADATA_VERSION}"
 
     def _get_metadata_body(self):
+        """_summary_
+
+        Returns:
+            _type_: _description_
+        """
         return json.dumps({
             "expires_in": 3600
         })
 
     def _get_metadata_headers(self) -> dict:
+        """_summary_
+
+        Returns:
+            dict: _description_
+        """
         return {
             'Metadata-Flavor': 'ibm',
             'Accept': 'application/json'
         }
-    
+
     def _get_metadata_headers_iam(self, metadata_token) -> dict:
+        """_summary_
+
+        Args:
+            metadata_token (_type_): _description_
+
+        Returns:
+            dict: _description_
+        """
         headers = self._get_metadata_headers()
         headers['Authorization'] = f"Bearer {metadata_token}"
         return headers
-        
+
     def _get_metadata_connection(self):
+        """_summary_
+
+        Raises:
+            ApiException: _description_
+
+        Returns:
+            _type_: _description_
+        """
         connection = None
         if self._check_connectivity(self.METADATA_HOST, 80):
             connection = http.client.HTTPConnection(self.METADATA_HOST)
         elif self._check_connectivity(self.METADATA_HOST, 443):
             connection = http.client.HTTPSConnection(self.METADATA_HOST)
         if connection is None:
-            self.logger("Activate metadata at VSI instance please! and be sure that a TP is bound to the instance")
-            raise Exception("Activate metadata at VSI instance please! and be sure that a TP is bound to the instance")
-        return connection        
+            self.logger("Activate metadata at VSI instance please!"
+                        "and be sure that a TP is bound to the instance")
+            raise ApiException("Activate metadata at VSI instance please!"
+                            "and be sure that a TP is bound to the instance")
+        return connection
 
     def _get_token_from_apikey(self):
+        """_summary_
+
+        Returns:
+            _type_: _description_
+        """
         # URL for token
         conn = http.client.HTTPSConnection("iam.cloud.ibm.com")
         # Payload for retrieving token. Note: An API key will need to be generated and replaced here
@@ -170,7 +252,15 @@ class HAFailOver(object):
             raise
 
     def _check_connectivity(self, ip, port):
-        import socket
+        """_summary_
+
+        Args:
+            ip (_type_): _description_
+            port (_type_): _description_
+
+        Returns:
+            _type_: _description_
+        """
         try:
             with socket.create_connection((ip, port), 5):
                 self.logger(f"Successfully connected to {ip}:{port}")
@@ -181,10 +271,24 @@ class HAFailOver(object):
             self.logger(f"Failed to connect to {ip}:{port}: {e}")
         return False
 
-    def parameterException(missingParameter):
-        raise Exception("Please!!! provide " + missingParameter)
+    def _parameter_exception(self, missing_parameter):
+        """_parameter_exception
+        Parameters:
+        missing_parameter (string): Description of the missing parameter
 
-    def parse_config(self):
+        Returns:
+        exception: raise an ApiException
+
+        """
+        raise ApiException("Please!!! provide " + missing_parameter)
+
+    def _parse_config(self):
+        """_parse_config
+
+        Returns:
+
+        """
+
         try:
             self.logger(env)
             if self.API_KEY in env:
@@ -200,7 +304,7 @@ class HAFailOver(object):
                 self.vpc_url = env[self.VPC_URL]
                 self.logger(self.VPC_URL + ": " + self.vpc_url)
             else:
-                self.parameterException(self.VPC_URL)
+                self._parameter_exception(self.VPC_URL)
 
             if self.VSI_LOCAL_AZ in env:
                 self.vsi_local_az = env[self.VSI_LOCAL_AZ]
@@ -216,15 +320,23 @@ class HAFailOver(object):
                 self.ext_ip_2 = env[self.EXT_IP_2]
                 self.logger("External IP 1: " + self.ext_ip_2)
 
-        except Exception as e:
+        except ApiException as e:
             self.logger(e)
 
     def update_vpc_fip(self, cmd, vni_id, fip_id):
+        """_summary_
+
+        Args:
+            cmd (_type_): add or remove
+            vni_id (_type_): vni uuid
+            fip_id (_type_): fip uuid
+
+        Returns:
+            _type_: _description_
+        """
         self.logger("Calling update vpc routing table route method VIP.")
         self.logger("VPC ID: " + self.vpc_id)
         self.logger("VPC URL: " + self.vpc_url)
-        self.logger("VPC self.ext_ip_1: " + self.ext_ip_1)
-        self.logger("VPC self.ext_ip_2: " + self.ext_ip_2)
         self.logger("VPC self.api_key: " + str(self.apikey))
         self.logger("cmd: " + cmd)
         authenticator = BearerTokenAuthenticator(self.get_token())
@@ -240,13 +352,20 @@ class HAFailOver(object):
                 ret = self.service.add_network_interface_floating_ip(
                     vni_id, fip_id
                 ).get_result()
-        except Exception as e:
+        except ApiException as e:
             print(e)
-            raise e
         print(ret)
         return True
 
     def update_vpc_routing_table_route(self, cmd):
+        """_summary_
+
+        Args:
+            cmd (_type_): SET or GET
+
+        Returns:
+            _type_: _description_
+        """
         self.logger("Calling update vpc routing table route method VIP.")
         self.logger("VPC ID: " + self.vpc_id)
         self.logger("VPC URL: " + self.vpc_url)
@@ -265,17 +384,13 @@ class HAFailOver(object):
                 list_tables = self.service.list_vpc_routing_tables(
                     self.vpc_id
                 ).get_result()["routing_tables"]
-                self.logger("Here 1.3")
-        except Exception as e:
+        except ApiException as e:
             print(e)
-            return False
-        update_done = False
+            return self.update_next_hop_vsi
         self.logger("Iterating through below Table Name and Table ID!!")
         self.logger(list_tables)
         for table in list_tables:
             ingress_routing_table = False
-            # if update_done:
-            #    break
             self.logger("Name: " + table["name"] + "\tID: " + table["id"])
             table_id_temp = table["id"]
             if (
@@ -300,11 +415,11 @@ class HAFailOver(object):
                     if cmd == "GET":
                         self.logger("GET Command")
                         print(route["next_hop"]["address"])
-                        update_done = False
-                        return update_done
+                        return route["next_hop"]["address"]
                     self.find_the_current_and_next_hop_ip(route["next_hop"]["address"])
                     self.logger(
-                        "VPC routing table route found!!, ID: %s, Name: %s, zone: %s, Next_Hop:%s, Destination:%s "
+                        "VPC routing table route found!!, ID: %s,"
+                        "Name: %s, zone: %s, Next_Hop:%s, Destination:%s "
                         % (
                             route["id"],
                             route["name"],
@@ -368,17 +483,26 @@ class HAFailOver(object):
                             )
                             route = create_vpc_routing_table_route_response.get_result()
                             self.logger("Created new route: " + route["id"])
-                        except Exception as e:
+                        except ApiException as e:
                             print(e)
 
-                        update_done = True
-        return update_done
+        return self.update_next_hop_vsi
 
     def logger(self, message):
+        """_summary_
+
+        Args:
+            message (_type_): _description_
+        """
         if self.DEBUG:
             print(message)
 
     def find_the_current_and_next_hop_ip(self, route_address):
+        """_summary_
+
+        Args:
+            route_address (_type_): _description_
+        """
         if route_address == self.ext_ip_1:
             # To be updated with IP address.
             self.update_next_hop_vsi = self.ext_ip_2
@@ -394,21 +518,74 @@ class HAFailOver(object):
 
 
 def fail_over(cmd):
-    haFailOver = HAFailOver()
+    """_summary_
+
+    Args:
+        cmd (_type_): GET or SET
+
+    Returns:
+        _type_: _description_
+    """
+    ha_fail_over = HAFailOver()
     # self.logger("Request received from: " + remote_addr)
-    made_update = haFailOver.update_vpc_routing_table_route(cmd)
+    made_update = ha_fail_over.update_vpc_routing_table_route(cmd)
     return "Updated Custom Route: " + str(made_update)
 
 
 def fail_over_fip(cmd, vni_id, fip_id):
-    haFailOver = HAFailOver()
-    haFailOver.update_vpc_fip(cmd, vni_id, fip_id)
+    """_summary_
+
+    Args:
+        cmd (_type_): add or remove
+        vni_id (_type_): vni uuid
+        fip_id (_type_): fip uuid
+    """
+    ha_fail_over = HAFailOver()
+    ha_fail_over.update_vpc_fip(cmd, vni_id, fip_id)
+
+def fail_over_floating_ip(vpc_url, master_vni_id, passive_vni_id , fip_id):
+    """_summary_
+
+    Args:
+        vpc_url (_type_): _description_
+        master_vni_id (_type_): _description_
+        passive_vni_id (_type_): _description_
+        fip_id (_type_): _description_
+    """
+    ha_fail_over = HAFailOver()
+    ha_fail_over.vpc_url = vpc_url
+    ha_fail_over.update_vpc_fip("remove", passive_vni_id, fip_id)
+    ha_fail_over.update_vpc_fip("add", master_vni_id, fip_id)
+
+def fail_over_cr_vip (cmd , vpc_url, ext_ip_1 , ext_ip_2 , vpc_id, az):
+    """_summary_
+
+    Args:
+        cmd (_type_): SET or GET
+        vpc_url (_type_): IBM cloud regional VPC URL
+        ext_ip_1 (_type_): Ip of the first VSI
+        ext_ip_2 (_type_): Ip of teh secound VSI
+        vpc_id (_type_): VPD uuid
+        az (_type_): Avilability zone, in a zonal VIP can be none 
+
+    Returns:
+        _type_: _description_
+    """
+    ha_fail_over = HAFailOver()
+    ha_fail_over.vpc_url = vpc_url
+    ha_fail_over.vpc_id = vpc_id
+    ha_fail_over.ext_ip_2 = ext_ip_2
+    ha_fail_over.ext_ip_1 = ext_ip_1
+    ha_fail_over.vsi_local_az = az
+    next_hop = ha_fail_over.update_vpc_routing_table_route(cmd)
+    return next_hop
 
 
 def usage_fip():
-    print("{0} [FIP] [CMD add|remove] [VNI_ID] [FIP_ID]".format(sys.argv[0]))
+    """_summary_
+    """
+    print("{0} [FIP] [CMD add|remove] [VNI_ID] [FIP_ID]"f'{sys.argv[0]}')
     print("\n")
-
 
 if __name__ == "__main__":
     if len(sys.argv) > 2:
