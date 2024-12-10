@@ -21,7 +21,10 @@
 # limitations under the License.
 # ------------------------------------------------------------------------
 import subprocess
-import ipaddress 
+import ipaddress
+import os
+import sys
+import textwrap
 
 OCF_FUNCTIONS_DIR = os.environ.get(
     "OCF_FUNCTIONS_DIR", "%s/lib/heartbeat" % os.environ.get("OCF_ROOT")
@@ -49,27 +52,27 @@ def os_ip(ip):
     return ip in  response.stdout
 
 def ip_address_validator(ip):
-    """validate ip address string 
+    """validate ip address string
 
     Args:
-        ip (string): ip address 
+        ip (string): ip address
 
     Returns:
         bool: true if the strig is a valid ipv4 ip address
     """
     try:
         ip_obj = ipaddress.ip_address(ip)
-        retrun True
+        return True
     except ValueError:
         return False
 
-def validate_all_action:
-vpc_url="",
+def validate_all_action(
+    vpc_url="",
     ext_ip_1="",
     ext_ip_2="",
     api_key="",
 ):
-    """Stop VIP 
+    """Stop VIP
 
     Args:
         vpc_url (str, mandatory): vpc_url for teh region .
@@ -80,7 +83,7 @@ vpc_url="",
     Returns:
         _type_: _description_
     """
-    return $OCF_SUCCESS
+    return ocf.OCF_SUCCESS
 
 def stop_action(
     vpc_url="",
@@ -88,7 +91,7 @@ def stop_action(
     ext_ip_2="",
     api_key="",
 ):
-    """Stop VIP 
+    """Stop VIP
 
     Args:
         vpc_url (str, mandatory): vpc_url for teh region .
@@ -100,7 +103,7 @@ def stop_action(
         _type_: _description_
     """
     ocf.logger.info(f"stop_action:stoping")
-    return $OCF_SUCCESS
+    return ocf.OCF_SUCCESS
 
 def start_action(
     vpc_url="",
@@ -116,7 +119,7 @@ def start_action(
         api_key (str, optional): IBM Cloud API acsess key. Defaults to "".
 
     Change custom route nexthop to point to this endpoint.
-    In case of a cross AZ Active Passive the route adveritise zone will be chaged to teh new acrtive zone 
+    In case of a cross AZ Active Passive the route adveritise zone will be chaged to teh new acrtive zone
     """
     ibm_cloud_fail_over.fail_over_cr_vip("SET", vpc_url , ext_ip_1, ext_ip_2, api_key)
     active_ip = ibm_cloud_fail_over.fail_over_cr_vip("GET", vpc_url , ext_ip_1, ext_ip_2, api_key)
@@ -143,7 +146,7 @@ def main():
     """Instantiate the resource agent."""
 
     agent_description = textwrap.dedent("""\
-        Resource Agent to move a IBM Cloud VIP based on Custom Route 
+        Resource Agent to move a IBM Cloud VIP based on Custom Route
         from one virtual network interface (VNI) to another.
         The prerequisites for the use of this resource agent are as follows:
 
@@ -151,21 +154,20 @@ def main():
         2. Enable Instance Metadata enabled on the two nodes
         3. allow_ip_spoofing enabled on the Virtual network interface
         3. IBM Cloud API Key or Trused profile:
-        
 
-        
+
+
     """)
 
     agent = ocf.Agent(
         "ibmcloud-vpc-move-vip",
         shortdesc="Manages moving move a IBM Cloud VIP based on Custom Route",
-        longdesc=agent_description,
-        version=1.00,
+        longdesc=agent_description
     )
 
-    
+
     agent.add_parameter(
-        "vpc_url"",
+        "vpc_url",
         shortdesc="VPC_URL",
         longdesc="IBM Cloud Public VPC URL for your region or a VPE URL for IBM Cloud VPC",
         content_type="string",
@@ -195,7 +197,7 @@ def main():
         longdesc=(
             "API Key or @API_KEY_FILE_PATH for IBM Cloud access. "
             "The API key content or the path of an API key file that is indicated by the @ symbol."
-            "Not needed if trusted profile is used 
+            "Not needed if trusted profile is used"
         ),
         content_type="string",
         required=False,

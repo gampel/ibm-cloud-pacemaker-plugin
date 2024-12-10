@@ -14,5 +14,6 @@ install_plugin:
 	chmod +x /usr/lib/ocf/resource.d/ibm-cloud/*
 
 install_python_plugins:
-	sudo sed -e 's|#!@PYTHON@|#!/usr/bin/python3|' ibm-cloud-ocf/ibm_cloud_pacemaker_fail_over.py   > /usr/lib/ocf/resource.d/ibm-cloud/ibm_cloud_pacemaker_fail_over
-	sudo chmod 755 /usr/lib/ocf/resource.d/ibm-cloud/ibm_cloud_pacemaker_fail_over
+	sudo sed -e 's|#!@PYTHON@|#!/usr/bin/python3|' ibm-cloud-ocf/ibmcloud-vpc-move-vip.in   > /usr/lib/ocf/resource.d/ibm-cloud/ibmcloud-vpc-move-vip
+	sudo chmod 755 /usr/lib/ocf/resource.d/ibm-cloud/ibmcloud-vpc-move-vip
+	cp scripts/ibm_cloud_pacemaker_fail_over.py 	/usr/lib/ocf/resource.d/ibm-cloud/ibm_cloud_fail_over.py
