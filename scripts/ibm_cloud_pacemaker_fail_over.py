@@ -49,6 +49,7 @@ class HAFailOver():
     METADATA_VERSION = "2022-03-01"
     METADATA_HOST = "api.metadata.cloud.ibm.com"
     METADATA_PATH = "/instance_identity/v1/"
+    METADATA_INSTACE_PATH = "/metadata/v1/instance"
     apikey = None
     vpc_url = ""
     vpc_id = ""
@@ -146,6 +147,14 @@ class HAFailOver():
             _type_: _description_
         """
         return f"{self.METADATA_PATH}token?version={self.METADATA_VERSION}"
+
+    def _get_metadata_istance_path(self):
+        """_summary_
+
+        Returns:
+            _type_: _description_
+        """
+        return f"{self.METADATA_INSTACE_PATH}?version={self.METADATA_VERSION}"
 
     def _get_metadata_iam_token_path(self):
         """_summary_
@@ -516,6 +525,15 @@ class HAFailOver():
         self.logger("Current next hop IP is: " + self.next_hop_vsi)
         self.logger("Update next hop IP to: " + self.update_next_hop_vsi)
 
+    def get_instance_metadata(self):
+        connection = self._get_metadata_connection()
+        metadata_token = self._get_metadata_token(connection)
+        connection.request("GET",
+                           self._get_metadata_istance_path(),
+                           headers=self._get_metadata_headers_iam(metadata_token))
+        response = json.loads(connection.getresponse().read().decode("utf-8"))
+        print (response)
+        return response
 
 def fail_over(cmd):
     """_summary_
@@ -557,26 +575,29 @@ def fail_over_floating_ip(vpc_url, master_vni_id, passive_vni_id , fip_id):
     ha_fail_over.update_vpc_fip("remove", passive_vni_id, fip_id)
     ha_fail_over.update_vpc_fip("add", master_vni_id, fip_id)
 
-def fail_over_cr_vip (cmd , vpc_url, ext_ip_1 , ext_ip_2 , vpc_id, az):
+def fail_over_cr_vip (cmd , vpc_url, ext_ip_1 , ext_ip_2, api_key):
     """_summary_
 
     Args:
-        cmd (_type_): SET or GET
-        vpc_url (_type_): IBM cloud regional VPC URL
-        ext_ip_1 (_type_): Ip of the first VSI
-        ext_ip_2 (_type_): Ip of teh secound VSI
-        vpc_id (_type_): VPD uuid
-        az (_type_): Avilability zone, in a zonal VIP can be none 
-
+        cmd (string): SET or GET
+        vpc_url (string): IBM cloud regional VPC URL
+        ext_ip_1 (string): Ip of the first VSI
+        ext_ip_2 (string): Ip of teh secound VSI
+        apy_key  (string)
     Returns:
         _type_: _description_
     """
     ha_fail_over = HAFailOver()
     ha_fail_over.vpc_url = vpc_url
-    ha_fail_over.vpc_id = vpc_id
     ha_fail_over.ext_ip_2 = ext_ip_2
     ha_fail_over.ext_ip_1 = ext_ip_1
-    ha_fail_over.vsi_local_az = az
+    ha_fail_over.apikey = api_key
+    instance_metadata = ha_fail_over.get_instance_metadata()
+    if "vpc" in instance_metadata:
+        ha_fail_over.vpc_id = instance_metadata["vpc"]["id"]
+    if "zone" in instance_metadata:
+        ha_fail_over.vsi_local_az = instance_metadata["zone"]["name"]
+
     next_hop = ha_fail_over.update_vpc_routing_table_route(cmd)
     return next_hop
 
