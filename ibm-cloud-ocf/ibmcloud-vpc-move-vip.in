@@ -25,7 +25,7 @@ import ipaddress
 import os
 import sys
 import textwrap
-import time 
+import time
 
 OCF_FUNCTIONS_DIR = os.environ.get(
     "OCF_FUNCTIONS_DIR", "%s/lib/heartbeat" % os.environ.get("OCF_ROOT")
@@ -33,8 +33,8 @@ OCF_FUNCTIONS_DIR = os.environ.get(
 
 sys.path.append(OCF_FUNCTIONS_DIR)
 
-RETRY_COUNT = 20
-SLEEP_TIME  = 1 
+RETRY_COUNT = 1
+SLEEP_TIME  = 1
 
 try:
     import ocf
@@ -65,7 +65,7 @@ def ip_address_validator(ip):
         bool: true if the strig is a valid ipv4 ip address
     """
     try:
-        ip_obj = ipaddress.ip_address(ip)
+        ipaddress.ip_address(ip)
         return True
     except ValueError:
         return False
@@ -76,7 +76,7 @@ def validate_all_action(
     ext_ip_2="",
     api_key="",
 ):
-    """Stop VIP
+    """validate all paramters
 
     Args:
         vpc_url (str, mandatory): vpc_url for teh region .
@@ -87,6 +87,11 @@ def validate_all_action(
     Returns:
         _type_: _description_
     """
+    if not ip_address_validator(ext_ip_1):
+      return ocf.OCF_ERR_CONFIGURED
+    if not ip_address_validator(ext_ip_2):
+      return ocf.OCF_ERR_CONFIGURED
+    ocf.logger.debug(f"validate_all_action: {vpc_url} {api_key}")
     return ocf.OCF_SUCCESS
 
 def stop_action(
@@ -106,17 +111,16 @@ def stop_action(
     Returns:
         _type_: _description_
     """
-    ocf.logger.info(f"stop_action:stoping")
+    ocf.logger.info("stop_action:stoping")
     res = monitor_action(vpc_url, ext_ip_1, ext_ip_2, api_key)
     if res == ocf.OCF_NOT_RUNNING:
-        ocf.logger.info(f"Resource is already stopped") 
+        ocf.logger.info("Resource is already stopped")
     if res == ocf.OCF_SUCCESS:
         for i in range(0,RETRY_COUNT):
             time.sleep(SLEEP_TIME)
             res = monitor_action(vpc_url, ext_ip_1, ext_ip_2, api_key)
             if res == ocf.OCF_NOT_RUNNING:
                 break
-
     return ocf.OCF_SUCCESS
 
 def start_action(
@@ -133,13 +137,16 @@ def start_action(
         api_key (str, optional): IBM Cloud API acsess key. Defaults to "".
 
     Change custom route nexthop to point to this endpoint.
-    In case of a cross AZ Active Passive the route adveritise zone will be chaged to teh new acrtive zone
+    In case of a cross AZ Active Passive the route adveritise zone will
+    be chaged to teh new acrtive zone
     """
     try:
-        ibm_cloud_fail_over.fail_over_cr_vip("SET", vpc_url , ext_ip_1, ext_ip_2, api_key)
-        active_ip = ibm_cloud_fail_over.fail_over_cr_vip("GET", vpc_url , ext_ip_1, ext_ip_2, api_key)
+        ibm_cloud_fail_over.fail_over_cr_vip("SET", vpc_url , ext_ip_1,
+		ext_ip_2, api_key)
+        active_ip = ibm_cloud_fail_over.fail_over_cr_vip("GET", vpc_url ,
+		ext_ip_1, ext_ip_2, api_key)
         ocf.logger.info(f"start_action: active_ip: {active_ip}")
-     except Exception as e:
+    except Exception as e:
         ocf.logger.error('Couldn\'t connect with IBM Cloud api: ' + str(e))
         sys.exit(ocf.OCF_ERR_GENERIC)
 
@@ -153,12 +160,13 @@ def monitor_action(
 ):
     """monitor_action: check if service ip and gateway are responding."""
 
-    ocf.logger.debug(f"monitor_action:")
+    ocf.logger.debug("monitor_action:")
     try:
-        active_ip = ibm_cloud_fail_over.fail_over_cr_vip("GET", vpc_url , ext_ip_1, ext_ip_2, api_key)
+        active_ip = ibm_cloud_fail_over.fail_over_cr_vip("GET", vpc_url , ext_ip_1,
+			ext_ip_2, api_key)
         if ip_address_validator(active_ip):
             if os_ip(active_ip):
-             return ocf.OCF_SUCCESS
+            	return ocf.OCF_SUCCESS
         return ocf.OCF_NOT_RUNNING
     except Exception as e:
         ocf.logger.error('Couldn\'t connect with IBM Cloud api: ' + str(e))
