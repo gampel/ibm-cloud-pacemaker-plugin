@@ -25,12 +25,16 @@ import ipaddress
 import os
 import sys
 import textwrap
+import time 
 
 OCF_FUNCTIONS_DIR = os.environ.get(
     "OCF_FUNCTIONS_DIR", "%s/lib/heartbeat" % os.environ.get("OCF_ROOT")
 )
 
 sys.path.append(OCF_FUNCTIONS_DIR)
+
+RETRY_COUNT = 20
+SLEEP_TIME  = 1 
 
 try:
     import ocf
@@ -41,8 +45,8 @@ except ImportError:
 try:
     import ibm_cloud_fail_over
 except ImportError:
-    sys.stderr.write("ImportError: import ibm_cloud_fail_over module import failed.")
-    sys.exit(5)
+     sys.stderr.write("ImportError: import ibm_cloud_fail_over module import failed.")
+     pass
 
 def os_ip(ip):
     """Check if VSI own this IP address."""
@@ -103,6 +107,16 @@ def stop_action(
         _type_: _description_
     """
     ocf.logger.info(f"stop_action:stoping")
+    res = monitor_action(vpc_url, ext_ip_1, ext_ip_2, api_key)
+    if res == ocf.OCF_NOT_RUNNING:
+        ocf.logger.info(f"Resource is already stopped") 
+    if res == ocf.OCF_SUCCESS:
+        for i in range(0,RETRY_COUNT):
+            time.sleep(SLEEP_TIME)
+            res = monitor_action(vpc_url, ext_ip_1, ext_ip_2, api_key)
+            if res == ocf.OCF_NOT_RUNNING:
+                break
+
     return ocf.OCF_SUCCESS
 
 def start_action(
@@ -121,9 +135,14 @@ def start_action(
     Change custom route nexthop to point to this endpoint.
     In case of a cross AZ Active Passive the route adveritise zone will be chaged to teh new acrtive zone
     """
-    ibm_cloud_fail_over.fail_over_cr_vip("SET", vpc_url , ext_ip_1, ext_ip_2, api_key)
-    active_ip = ibm_cloud_fail_over.fail_over_cr_vip("GET", vpc_url , ext_ip_1, ext_ip_2, api_key)
-    ocf.logger.info(f"start_action: active_ip: {active_ip}")
+    try:
+        ibm_cloud_fail_over.fail_over_cr_vip("SET", vpc_url , ext_ip_1, ext_ip_2, api_key)
+        active_ip = ibm_cloud_fail_over.fail_over_cr_vip("GET", vpc_url , ext_ip_1, ext_ip_2, api_key)
+        ocf.logger.info(f"start_action: active_ip: {active_ip}")
+     except Exception as e:
+        ocf.logger.error('Couldn\'t connect with IBM Cloud api: ' + str(e))
+        sys.exit(ocf.OCF_ERR_GENERIC)
+
     return ocf.OCF_SUCCESS
 
 def monitor_action(
@@ -135,11 +154,15 @@ def monitor_action(
     """monitor_action: check if service ip and gateway are responding."""
 
     ocf.logger.debug(f"monitor_action:")
-    active_ip = ibm_cloud_fail_over.fail_over_cr_vip("GET", vpc_url , ext_ip_1, ext_ip_2, api_key)
-    if ip_address_validator(active_ip):
-        if os_ip(active_ip):
-            return ocf.OCF_SUCCESS
-    return ocf.OCF_NOT_RUNNING
+    try:
+        active_ip = ibm_cloud_fail_over.fail_over_cr_vip("GET", vpc_url , ext_ip_1, ext_ip_2, api_key)
+        if ip_address_validator(active_ip):
+            if os_ip(active_ip):
+             return ocf.OCF_SUCCESS
+        return ocf.OCF_NOT_RUNNING
+    except Exception as e:
+        ocf.logger.error('Couldn\'t connect with IBM Cloud api: ' + str(e))
+        sys.exit(ocf.OCF_ERR_GENERIC)
 
 
 def main():

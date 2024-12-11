@@ -73,14 +73,14 @@ IBM Cloud Public VPC URL for your region or a VPE URL for IBM Cloud VPC
 <longdesc lang="en">
 Ip address for instace 1 
 </longdesc>
-<shortdesc lang="en">predefined private ip address for ec2 instance</shortdesc>
+<shortdesc lang="en">predefined private ip address for first instance</shortdesc>
 <content type="string" default="" />
 </parameter>
 <parameter name="ext_ip_2" unique="1" required="1">
 <longdesc lang="en">
 Ip address for instace 2 
 </longdesc>
-<shortdesc lang="en">predefined private ip address for ec2 instance</shortdesc>
+<shortdesc lang="en">predefined private ip address for secound instance</shortdesc>
 <content type="string" default="" />
 </parameter>
 
