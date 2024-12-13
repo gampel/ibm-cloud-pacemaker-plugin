@@ -6,6 +6,7 @@ sudo apt-get -y install pip
 sudo apt-get -y remove python3-urllib3
 sudo python3 -m pip install --break-system-packages --upgrade ibm-cloud-sdk-core
 sudo python3 -m pip install --break-system-packages --upgrade ibm-vpc
+sudo python3 -m pip install --break-system-packages --upgrade ibm_cloud_fail_over
 sudo apt-get -y install python3-dotenv
 sudo apt-get -y install haveged
 sudo corosync-keygen
