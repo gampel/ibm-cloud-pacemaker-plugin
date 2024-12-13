@@ -1,11 +1,16 @@
 sudo yum -y update
+# on rhel-9
+subscription-manager repos --enable=rhel-9-for-x86_64-highavailability-rpms
+# on centos Stream 9
+dnf config-manager --set-enabled highavailability
 sudo yum -y install pacemaker
 sudo yum -y install pcs
 sudo yum -y install python3
 sudo yum -y install pip
 sudo python -m pip install --upgrade ibm-cloud-sdk-core
 sudo python3 -m pip install --upgrade ibm-vpc
-sudo yum -y install  python3-dotenv
+sudo python3 -m pip install --upgrade ibm-cloud-pacemaker-plugin
+sudo python -m pip install --upgrade python-dotenv
 sudo yum -y install haveged
 sudo corosync-keygen
 sudo yum -y remove --purge haveged
