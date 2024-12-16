@@ -9,7 +9,7 @@ sudo yum -y install python3
 sudo yum -y install pip
 sudo python -m pip install --upgrade ibm-cloud-sdk-core
 sudo python3 -m pip install --upgrade ibm-vpc
-sudo python3 -m pip install --upgrade ibm-cloud-pacemaker-plugin
+sudo python3 -m pip install --upgrade ibm_cloud_fail_over
 sudo python -m pip install --upgrade python-dotenv
 sudo yum -y install haveged
 sudo corosync-keygen
