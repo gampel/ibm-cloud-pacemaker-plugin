@@ -25,10 +25,3 @@ sudo yum -y install glib-2.0
 sudo yum -y install docbook-xsl
 sudo yum -y install pkg-config
 sudo yum -y install build-essential
-git clone https://github.com/gampel/resource-agents.git
-cd resource-agents
-git checkout ibmcloud-vpc-cr-vip
-./autogen.sh
-./configure
-make
-make install
