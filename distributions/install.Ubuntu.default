@@ -16,3 +16,17 @@ echo "Please copy authkey to secound ip sudo scp /etc/corosync/authkey username@
 sudo corosync-cmapctl | grep members
 sudo apt-get install resource-agents-base
 sudo apt-get install resource-agents-extra
+# build and install resource agent fork
+sudo apt-get -y install autogen
+sudo apt-get -y install autoconf
+sudo apt-get -y install glib-2.0
+sudo apt-get -y install docbook-xsl
+sudo apt-get -y install pkg-config
+sudo apt-get -y  install build-essential
+git clone https://github.com/gampel/resource-agents.git
+cd resource-agents
+git checkout ibmcloud-vpc-cr-vip
+./autogen.sh
+./configure
+make
+make install
