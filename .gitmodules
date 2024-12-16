@@ -1,0 +1,6 @@
+[submodule "deps/resource-agents"]
+	path = deps/resource-agents
+	url = https://github.com/gampel/resource-agents
+[submodule "deps/ibm_cloud_fail_over"]
+	path = deps/ibm_cloud_fail_over
+	url = https://github.com/gampel/ibm_cloud_fail_over
