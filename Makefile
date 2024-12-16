@@ -19,6 +19,7 @@ install_python_plugins:
 	cp scripts/ibm_cloud_pacemaker_fail_over.py 	/usr/lib/ocf/resource.d/ibm-cloud/ibm_cloud_fail_over.py
 
 deps/resource-agents/heartbeat/ibmcloud-vpc-move-route:
+	git submodule update --init
 	cd deps/resource-agents ; ./autogen.sh ; ./configure ; make
 
 rsource_agnet: deps/resource-agents/heartbeat/ibmcloud-vpc-move-route rsource_agnet_install
