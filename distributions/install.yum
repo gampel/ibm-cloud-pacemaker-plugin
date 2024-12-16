@@ -25,3 +25,5 @@ sudo yum -y install  glib2-devel
 sudo yum -y install  libqb-devel
 sudo yum -y install docbook-xsl
 sudo yum -y install pkg-config
+sudo yum -y install automake
+sudo yum -y group install "Development Tools"
