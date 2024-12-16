@@ -21,7 +21,7 @@ sudo corosync-cmapctl | grep members
 # build and install resource agent fork
 sudo yum -y install autogen
 sudo yum -y install autoconf
-sudo yum -y install glib-2.0
+sudo yum -y install  glib2-devel
+sudo yum -y install  libqb-devel
 sudo yum -y install docbook-xsl
 sudo yum -y install pkg-config
-sudo yum -y install build-essential
