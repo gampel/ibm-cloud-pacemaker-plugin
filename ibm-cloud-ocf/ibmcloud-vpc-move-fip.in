@@ -114,9 +114,9 @@ def stop_action(
     res = monitor_action(vpc_url, vni_id_1, vni_id_2, api_key)
     if res == ocf.OCF_NOT_RUNNING:
         ocf.logger.info("Resource is already stopped")
-    	return ocf.OCF_SUCCESS
+        return ocf.OCF_SUCCESS
     try:
-	ibm_cloud_fail_over.fail_over_floating_ip_stop(vpc_url , vni_id, 
+        ibm_cloud_fail_over.fail_over_floating_ip_stop(vpc_url , vni_id, 
 							fip_id, api_key)
     except Exception as e:
         ocf.logger.error('Couldn\'t connect with IBM Cloud api: ' + str(e))
