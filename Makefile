@@ -7,7 +7,7 @@ install_all: install_deps install_plugin rsource_agnet
 install_deps:
 	./install.sh
 
-install_plugin:
+install_plugin: install_python_plugins
 	mkdir -p /usr/lib/ocf/resource.d/ibm-cloud/
 	cp scripts/ibm_cloud_pacemaker_fail_over.py /usr/local/bin
 	cp -a ibm-cloud-ocf/* /usr/lib/ocf/resource.d/ibm-cloud/
