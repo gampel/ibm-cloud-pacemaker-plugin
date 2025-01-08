@@ -1,3 +1,4 @@
+
 # IBM Cloud VPC Pacemaker Plugin
 
 This repository contains the IBM Cloud Pacemaker Plugins, which provides
@@ -23,7 +24,7 @@ applications in a high-availability setup.
 	- Custom route VIP,  active passive same AZ or Cross/Multi-AZ  
 	- Floating IP Failover (Singel AZ)
 - Supports easy configuration and deployment.
-- Support Trusted profile IAM token or API key based 
+- Support Trusted profile IAM token or API key-based 
 
 ## Prerequisites
 
@@ -46,13 +47,24 @@ applications in a high-availability setup.
     
 2. **Install the Plugin & dependencies **:
    Navigate into the cloned directory and build the plugin:
+Install make 
+on Ubuntu using 
 
    ```bash
-   sudo apt-get install make
+    sudo apt-get install make
+    ```
+    or using yum 
+    ```bash
+    sudo yum install make
+    ```
+
+```
+  
    cd ibm-cloud-pacemaker-plugin
    make install 
    ```
-   Currently, only apt-get (Ubuntu) based install is supported
+
+Make install will install all needed dependencies and compile and install the [resource-agent](https://github.com/ClusterLabs/resource-agents) repository until the next release, which will include the new IBM cloud VPC resources.
 
 4. **Configure CoroSync**:
    Configure /etc/corosync/corosync.conf with your two nodes Active Passive Ips 
@@ -82,12 +94,12 @@ Example Configuration is provided in [corosync.conf](https://github.com/gampel/i
     nodelist {
       node {
         ring0_addr: <vsi_1_ip>
-        name: primary
+        name: first
         nodeid: 1
       }
       node {
         ring0_addr: <vs_2_ip>
-        name: secondary
+        name: second
         nodeid: 2
       }
     }
@@ -157,7 +169,7 @@ For example:
 
    ```bash
    
-   pcs resource create  customRouteFailover ocf:ibm-cloud:customRouteFailover   \
+   pcs resource create  ibm-cloud-vpc-cr-vip  ocf:heartbeat:ibm-cloud-vpc-cr-vip   \
                         api_key="API_KEY" \
                         ext_ip_1="IP_1"   \
                         ext_ip_2="IP_2"   \
@@ -167,7 +179,7 @@ For example:
    ```
    
 
-In case you want to use a Trusted profile IAM token do not include optional api_key parameter
+When Trusted profile IAM token is used the optional api_key parameter is not needed 
 
 api_key = `[IBM Cloud API Key](https://cloud.ibm.com/docs/account?topic=account-userapikey&interface=ui) Your VPC Access API key` 
  
