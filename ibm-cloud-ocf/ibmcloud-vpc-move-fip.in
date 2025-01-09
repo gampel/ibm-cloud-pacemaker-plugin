@@ -186,7 +186,7 @@ def main():
 
     agent = ocf.Agent(
         "ibmcloud-vpc-move-fip",
-        shortdesc="Manages moving move a IBM Cloud FIP IP",
+        shortdesc="Manages moving an IBM Cloud FIP IP",
         longdesc=agent_description
     )
 
@@ -235,12 +235,12 @@ def main():
         required=False,
     )
 
-    agent.add_action("start", timeout=900, handler=start_action)
-    agent.add_action("stop", timeout=450, handler=stop_action)
+    agent.add_action("start", timeout=30, handler=start_action)
+    agent.add_action("stop", timeout=30, handler=stop_action)
     agent.add_action(
         "monitor", depth=0, timeout=60, interval=60, handler=monitor_action
     )
-    agent.add_action("validate-all", timeout=300, handler=validate_all_action)
+    agent.add_action("validate-all", timeout=60, handler=validate_all_action)
     agent.run()
 
 if __name__ == "__main__":
