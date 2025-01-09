@@ -185,7 +185,7 @@ def main():
     """)
 
     agent = ocf.Agent(
-        "ibmcloud-vpc-move-fip",
+        "ibm-cloud-vpc-move-fip",
         shortdesc="Manages moving an IBM Cloud FIP IP",
         longdesc=agent_description
     )
