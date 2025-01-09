@@ -1,8 +1,7 @@
 #!@PYTHON@ -tt
 # ------------------------------------------------------------------------
-# Description:  Resource Agent to move a Power Virtual Server subnet
-#               and its IP address from one virtual server instance
-#               to another.
+# Description:  Resource Agent to move an IBM Cloud  Floating IP (FIP) 
+#		From one Virtual network Interface to another 
 #
 # Authors:      Eran Gampel
 #
@@ -77,9 +76,9 @@ def validate_all_action(
     """validate all paramters
 
     Args:
-        vpc_url (str, mandatory): vpc_url for teh region .
+        vpc_url (str, mandatory): vpc_url for the region .
         vni_id_1 (str, mandatory): First Instance IP.
-        vni_id_2 (str, mandatory): Secound Instance IP.
+        vni_id_2 (str, mandatory): Second Instance IP.
         api_key (str, optional): IBM Cloud API acsess key. Defaults to "".
 
     Returns:
@@ -102,9 +101,9 @@ def stop_action(
     """Stop VIP
 
     Args:
-        vpc_url (str, mandatory): vpc_url for teh region .
+        vpc_url (str, mandatory): vpc_url for the region .
         vni_id_1 (str, mandatory): First Instance IP.
-        vni_id_2 (str, mandatory): Secound Instance IP.
+        vni_id_2 (str, mandatory): Second Instance IP.
         api_key (str, optional): IBM Cloud API acsess key. Defaults to "".
 
     Returns:
@@ -133,14 +132,14 @@ def start_action(
 ):
     """start_action: redirect  the service ip.
     Args:
-        vpc_url (str, mandatory): vpc_url for teh region .
+        vpc_url (str, mandatory): vpc_url for the region .
         vni_id_1 (str, mandatory): First Instance IP.
-        vni_id_2 (str, mandatory): Secound Instance IP.
+        vni_id_2 (str, mandatory): Second Instance IP.
         api_key (str, optional): IBM Cloud API acsess key. Defaults to "".
 
     Change custom route nexthop to point to this endpoint.
     In case of a cross AZ Active Passive the route adveritise zone will
-    be chaged to teh new acrtive zone
+    be chaged to the new acrtive zone
     """
     try:
         ibm_cloud_fail_over.fail_over_floating_ip_start(vpc_url, vni_id, 
@@ -183,9 +182,6 @@ def main():
         2. Enable Instance Metadata enabled on the two nodes
         3. allow_ip_spoofing enabled on the Virtual network interface
         3. IBM Cloud API Key or Trused profile:
-
-
-
     """)
 
     agent = ocf.Agent(
@@ -213,8 +209,8 @@ def main():
 
     agent.add_parameter(
         "vni_id_2",
-        shortdesc="IBM Cloud Virtual Network Interafce UUID for secound instance",
-        longdesc="IBM Cloud Virtual Network Interafce UUID (VNI) for secound instance.",
+        shortdesc="IBM Cloud Virtual Network Interafce UUID for Second instance",
+        longdesc="IBM Cloud Virtual Network Interafce UUID (VNI) for Second instance.",
         content_type="string",
         required=True,
     )
