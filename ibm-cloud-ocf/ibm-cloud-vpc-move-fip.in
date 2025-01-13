@@ -1,7 +1,7 @@
 #!@PYTHON@ -tt
 # ------------------------------------------------------------------------
-# Description:  Resource Agent to move an IBM Cloud  Floating IP (FIP) 
-#		From one Virtual network Interface to another 
+# Description:  Resource Agent to move an IBM Cloud  Floating IP (FIP)
+#		From one Virtual network Interface to another
 #
 # Authors:      Eran Gampel
 #
@@ -24,7 +24,6 @@ import ipaddress
 import os
 import sys
 import textwrap
-import time
 
 OCF_FUNCTIONS_DIR = os.environ.get(
     "OCF_FUNCTIONS_DIR", "%s/lib/heartbeat" % os.environ.get("OCF_ROOT")
@@ -42,14 +41,14 @@ except ImportError:
 try:
     import ibm_cloud_fail_over
 except ImportError:
-     sys.stderr.write("ImportError: import ibm_cloud_fail_over module import failed.")
-     pass
+    sys.stderr.write("ImportError: import ibm_cloud_fail_over module import failed.")
+    pass
 
 def os_ip(ip):
     """Check if VSI own this IP address."""
 
     command = ["ip", "a"]
-    response = subprocess.run(command, capture_output=True, text=True)
+    response = subprocess.run(command, capture_output=True, text=True, check=False)
     return ip in  response.stdout
 
 def ip_address_validator(ip):
@@ -85,9 +84,9 @@ def validate_all_action(
         _type_: _description_
     """
     if not ip_address_validator(vni_id_1):
-      return ocf.OCF_ERR_CONFIGURED
+        return ocf.OCF_ERR_CONFIGURED
     if not ip_address_validator(vni_id_2):
-      return ocf.OCF_ERR_CONFIGURED
+        return ocf.OCF_ERR_CONFIGURED
     ocf.logger.debug(f"validate_all_action: {vpc_url} {api_key}")
     return ocf.OCF_SUCCESS
 
@@ -115,8 +114,8 @@ def stop_action(
         ocf.logger.info("Resource is already stopped")
         return ocf.OCF_SUCCESS
     try:
-        ibm_cloud_fail_over.fail_over_floating_ip_stop(vpc_url , vni_id, 
-							fip_id, api_key)
+        ibm_cloud_fail_over.fail_over_floating_ip_stop(vpc_url , vni_id_1,
+							vni_id_2, fip_id, api_key)
     except Exception as e:
         ocf.logger.error('Couldn\'t connect with IBM Cloud api: ' + str(e))
         sys.exit(ocf.OCF_ERR_GENERIC)
@@ -142,8 +141,8 @@ def start_action(
     be chaged to the new acrtive zone
     """
     try:
-        ibm_cloud_fail_over.fail_over_floating_ip_start(vpc_url, vni_id, 
-							fip_id, api_key)
+        ibm_cloud_fail_over.fail_over_floating_ip_start(vpc_url, vni_id_1,
+							vni_id_2, fip_id, api_key)
     except Exception as e:
         ocf.logger.error('Couldn\'t connect with IBM Cloud api: ' + str(e))
         sys.exit(ocf.OCF_ERR_GENERIC)
@@ -159,11 +158,13 @@ def monitor_action(
 ):
     """monitor_action: check if service ip and gateway are responding."""
 
-    ocf.logger.debug("monitor_action:")
+    ocf.logger.debug("monitor_action: url:" + vpc_url + "fip_id:" + fip_id +
+			"vni_id_1:" + vni_id_1 + "vni_id_2:" + vni_id_2)
     try:
         active_fip_id , active_fip_ip = ibm_cloud_fail_over.fail_over_get_attached_fip()
         if active_fip_id == fip_id:
-            	return ocf.OCF_SUCCESS
+            return ocf.OCF_SUCCESS
+        ocf.logger.debug("monitor_action: active fip ip:" + active_fip_ip)
         return ocf.OCF_NOT_RUNNING
     except Exception as e:
         ocf.logger.error('Couldn\'t connect with IBM Cloud api: ' + str(e))
@@ -174,7 +175,7 @@ def main():
     """Instantiate the resource agent."""
 
     agent_description = textwrap.dedent("""\
-        Resource Agent to move a IBM Cloud Public Floating IP (FIP) from one virtual network 
+        Resource Agent to move a IBM Cloud Public Floating IP (FIP) from one virtual network
         interface (VNI) to another.
         The prerequisites for the use of this resource agent are as follows:
 
