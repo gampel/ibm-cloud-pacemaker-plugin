@@ -50,7 +50,7 @@ Please perform steps 1 and 2 on the two VSI's.
    git clone https://github.com/gampel/ibm-cloud-pacemaker-plugin.git
    ```
     
-2. **Install the Plugin & dependencies **:
+2. **Install the Plugin & dependencies**:
    Navigate into the cloned directory and build the plugin:
 Install make 
 on Ubuntu using 
