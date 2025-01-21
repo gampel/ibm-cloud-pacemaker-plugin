@@ -40,7 +40,7 @@ applications in a high-availability setup.
 ## Installation
 
 Create two VSI's, in the case of the FIP plugin they need to be in the same Zone, 
-in the case of the Custom Route Plugin it can be in separated zones.
+in the case of the Custom Route Plugin they can be in separated zones.
 
 Please perform steps 1 and 2 on the two VSI's.
 
