@@ -39,6 +39,10 @@ applications in a high-availability setup.
 
 ## Installation
 
+Create two VSI's, in the case of the FIP plugin they need to be in the same Zone, in the case of the Custom Route it can be in separated zones.
+
+Please perform steps 1 and 2 on the two VSI's.
+
 1. **Clone the Repository**:
    First, clone the GitHub repository to your local machine:
 
