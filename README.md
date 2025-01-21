@@ -1,7 +1,8 @@
 
 # IBM Cloud VPC Pacemaker Plugin
 
-This repository contains the IBM Cloud Pacemaker Plugins, which provides
+This repository contains the IBM Cloud Pacemaker Plugins install, usability guide, and early access 
+for the IBM VPC plugins supported in the [ClusterLab](https://github.com/ClusterLabs) repository, which provides
 integration between IBM Cloud and the Pacemaker cluster resource manager.
 The plugin enables you to manage cloud resources and deployment within
 Pacemaker, allowing high availability for your applications in the
