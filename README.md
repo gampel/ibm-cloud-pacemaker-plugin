@@ -67,6 +67,14 @@ on Ubuntu using
 Make install will install all needed dependencies and compile and install the [resource-agent](https://github.com/ClusterLabs/resource-agents) repository until the next release, which will include the new IBM cloud VPC resources.
 
 4. **Configure CoroSync**:
+   
+   This example below is a two node setup, which is not intended for production environments, for production environments it is best to use 3 node setup with a separate quorum device (example comming soon).
+   
+   In the the two-node quorum, Because no tie-breaker mechanism exists, the two-node quorum is prone to the split-brain scenario. It is not intended for production environments.
+   I will incldue soon a setup example for 3 node quorum using quorum device.
+   
+   You can allow a cluster to sustain more node failures than standard quorum rules allows by configuring a separate quorum device which acts as a third-party arbitration device for the cluster. A quorum device is recommended for clusters with an even number of nodes. With two-node clusters, the use of a quorum device can better determine which node survives in a split-brain situation.
+   
    Configure /etc/corosync/corosync.conf with your two nodes Active Passive Ips 
 
    
