@@ -73,73 +73,105 @@ on Ubuntu using
 Make install will install all needed dependencies and compile and install the [resource-agent](https://github.com/ClusterLabs/resource-agents) repository until the next release, which will include the new IBM cloud VPC resources.
 
 4. **Configure CoroSync**:
-   
-   This example below is a two node setup, which is not intended for production environments, for production environments it is best to use 3 node setup with a separate quorum device (example comming soon).
-   
-   In the the two-node quorum, Because no tie-breaker mechanism exists, the two-node quorum is prone to the split-brain scenario. It is not intended for production environments.
-   I will incldue soon a setup example for 3 node quorum using quorum device.
-   
-   You can allow a cluster to sustain more node failures than standard quorum rules allows by configuring a separate quorum device which acts as a third-party arbitration device for the cluster. A quorum device is recommended for clusters with an even number of nodes. With two-node clusters, the use of a quorum device can better determine which node survives in a split-brain situation.
-   
-   Configure /etc/corosync/corosync.conf with your two nodes Active Passive Ips 
+ 
 
-   
+> This example below is a two node setup, which is not intended for
+> production environments, for production environments it is best to use
+> 3 node setup with a separate quorum device (example coming soon).
+>        In the the two-node quorum, Because no tie-breaker mechanism exists, the two-node quorum is prone to the split-brain scenario. It
+> is not intended for production environments.    I will incldue soon a
+> setup example for 3 node quorum using quorum device.
+>        You can allow a cluster to sustain more node failures than standard quorum rules allows by configuring a separate quorum device
+> which acts as a third-party arbitration device for the cluster. A
+> quorum device is recommended for clusters with an even number of
+> nodes. With two-node clusters, the use of a quorum device can better
+> determine which node survives in a split-brain situation.
 
-Example Configuration is provided in [corosync.conf](https://github.com/gampel/ibm-cloud-pacemaker-plugin/blob/main/conf/corosync.conf)
+   Set a password for user `hacluster` on each node in the cluster and authenticate user `hacluster` for each node in the cluster on the node from which you will be running the `pcs` commands.
+   
+```passwd hacluster ```
+
+Authenticate user `hacluster` for each node in the cluster on the node in order to create the authentication keys 
+```
+ pcs host auth node1  addr="<private ip node 1>" node2 addr="private ip node 2>"
+Username: hacluster
+Password: 
+```
+Create a two-node Cluster 
+
+```
+pcs cluster setup test_cluster  node1  addr="<ip node1>" node2 addr="<ip node 2>" 
+```
+
+
+
   
 
-    totem {
-      version: 2
-      cluster_name: IBM-cluster
-      transport: udpu
-      interface {
-        ringnumber: 0
-        bindnetaddr: <Loacl_Ip>
-        broadcast: yes
-        mcastport: 5405
-      }
-    }
-    
-    quorum {
-      provider: corosync_votequorum
-      two_node: 1
-    }
-    
-    nodelist {
-      node {
-        ring0_addr: <vsi_1_ip>
-        name: first
-        nodeid: 1
-      }
-      node {
-        ring0_addr: <vs_2_ip>
-        name: second
-        nodeid: 2
-      }
-    }
-    
-    logging {
-      to_logfile: yes
-      logfile: /var/log/corosync/corosync.log
-      to_syslog: yes
-      timestamp: on
-    }
+  Alternatively, you can set up the cluster manually as described below not recommended 
+   
 
-Do the same setup on both Selected VSI pair 
+> Configure /etc/corosync/corosync.conf with your two nodes Active
+> Passive Ips 
+> 
+>    
+> 
+> Example Configuration is provided in
+> [corosync.conf](https://github.com/gampel/ibm-cloud-pacemaker-plugin/blob/main/conf/corosync.conf)
+>   
+> 
+>     totem {
+>       version: 2
+>       cluster_name: IBM-cluster
+>       transport: udpu
+>       interface {
+>         ringnumber: 0
+>         bindnetaddr: <Loacl_Ip>
+>         broadcast: yes
+>         mcastport: 5405
+>       }
+>     }
+>     
+>     quorum {
+>       provider: corosync_votequorum
+>       two_node: 1
+>     }
+>     
+>     nodelist {
+>       node {
+>         ring0_addr: <vsi_1_ip>
+>         name: first
+>         nodeid: 1
+>       }
+>       node {
+>         ring0_addr: <vs_2_ip>
+>         name: second
+>         nodeid: 2
+>       }
+>     }
+>     
+>     logging {
+>       to_logfile: yes
+>       logfile: /var/log/corosync/corosync.log
+>       to_syslog: yes
+>       timestamp: on
+>     }
+> 
+> Do the same setup on both Selected VSI pair 
+> 
+> Copy the created auth key as part of the install to be the selected
+> pair auth key
+> 
+>     scp /etc/corosync/authkey username@second_vsi_ip:/tmp
+>      Copy it in  the second VSI to the /etc/corosync/authkey  directory and make sure it is root-owned 
+> 
+>     sudo mv /tmp/authkey /etc/corosync
+>     sudo chown root: /etc/corosync/authkey
+>     sudo chmod 400 /etc/corosync/authkey
 
-Copy the created auth key as part of the install to be the selected pair auth key
-
-    scp /etc/corosync/authkey username@second_vsi_ip:/tmp
-    
-Copy it in  the second VSI to the /etc/corosync/authkey  directory and make sure it is root-owned 
-
-    sudo mv /tmp/authkey /etc/corosync
-    sudo chown root: /etc/corosync/authkey
-    sudo chmod 400 /etc/corosync/authkey  
-
-Now we nee to restart corosyn of both VSIs 
+Now we need to restart corosync of both VSIs 
 
     sudo service corosync restart 
+    systemctl restart pacemaker
 
 Set stonith to false on both VSI's
 
@@ -336,5 +368,6 @@ To send this as a pull request (PR) to the repository:
 6. Select your fork and compare it with the base repository, then create the pull request.
 
 Feel free to adjust any sections according to your preferences or additional information you may want to include!
+
 
 
