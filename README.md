@@ -172,6 +172,7 @@ Now we need to restart corosync of both VSIs
 
     sudo service corosync restart 
     systemctl restart pacemaker
+    systemctl enable  pacemaker
 
 Set stonith to false on both VSI's
 
