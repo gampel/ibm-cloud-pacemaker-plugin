@@ -4,6 +4,8 @@ subscription-manager repos --enable=rhel-9-for-x86_64-highavailability-rpms
 # on centos Stream 9
 dnf config-manager --set-enabled highavailability
 sudo yum -y install pacemaker
+systemctl start pcsd.service
+systemctl enable pcsd.service
 sudo yum -y install pcs
 sudo yum -y install python3
 sudo yum -y install pip
