@@ -1,4 +1,5 @@
 
+
 # IBM Cloud VPC Pacemaker Plugin
 
 This repository contains the IBM Cloud Pacemaker Plugins install, usability guide, and early access 
@@ -72,20 +73,21 @@ on Ubuntu using
 
 Make install will install all needed dependencies and compile and install the [resource-agent](https://github.com/ClusterLabs/resource-agents) repository until the next release, which will include the new IBM cloud VPC resources.
 
-4. **Configure CoroSync**:
+3. **Configure CoroSync**:
  
 
 > This example below is a two node setup, which is not intended for
 > production environments, for production environments it is best to use
-> 3 node setup with a separate quorum device (example coming soon).
+> 3 node setup with a separate quorum device as described in section 3.4.
 >        In the the two-node quorum, Because no tie-breaker mechanism exists, the two-node quorum is prone to the split-brain scenario. It
-> is not intended for production environments.    I will incldue soon a
-> setup example for 3 node quorum using quorum device.
->        You can allow a cluster to sustain more node failures than standard quorum rules allows by configuring a separate quorum device
+> is not intended for production environments.     
+> You can allow a cluster to sustain more node failures than standard quorum rules allows by configuring a separate quorum device
 > which acts as a third-party arbitration device for the cluster. A
 > quorum device is recommended for clusters with an even number of
 > nodes. With two-node clusters, the use of a quorum device can better
 > determine which node survives in a split-brain situation.
+
+3.1 **Configuring the cluster using pcs**
 
    Set a password for user `hacluster` on each node in the cluster and authenticate user `hacluster` for each node in the cluster on the node from which you will be running the `pcs` commands.
    
@@ -105,11 +107,8 @@ pcs cluster setup test_cluster  node1  addr="<ip node1>" node2 addr="<ip node 2>
 
 
 
-  
-
-  Alternatively, you can set up the cluster manually as described below not recommended 
+  3.2 **Alternatively, you can set up the cluster manually as described below not recommended** 
    
-
 > Configure /etc/corosync/corosync.conf with your two nodes Active
 > Passive Ips 
 > 
@@ -167,7 +166,7 @@ pcs cluster setup test_cluster  node1  addr="<ip node1>" node2 addr="<ip node 2>
 >     sudo mv /tmp/authkey /etc/corosync
 >     sudo chown root: /etc/corosync/authkey
 >     sudo chmod 400 /etc/corosync/authkey
-
+3.3 **Restarting the services** 
 Now we need to restart corosync of both VSIs 
 
     sudo service corosync restart 
@@ -202,6 +201,10 @@ Run pcs status you should get the following:
       pacemaker: active/enabled
       pcsd: active/enabled
 
+3.4 **Optional 3-node quorum using quorum device**
+
+
+Follow instruction in [here](https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/8/html/configuring_and_managing_high_availability_clusters/assembly_configuring-quorum-devices-configuring-and-managing-high-availability-clusters#assembly_configuring-quorum-devices-configuring-and-managing-high-availability-clusters)  
 ## Configuring the Pacemaker resource 
 
 1. **Add Resources**:
