@@ -121,6 +121,6 @@ pcs resource create floatingIpFailover ocf:heartbeat:ibm-cloud-vpc-move-fip \
 
 ## Next Steps
 
-- Review the [Architecture](Architecture) documentation to understand the system components
-- Check [Best Practices](Best-Practices) for production deployment recommendations
-- Explore [Troubleshooting](Troubleshooting) guide for common issues and solutions 
+- Review the [Architecture](Architecture.md) documentation to understand the system components
+- Check [Best Practices](Best-Practices.md) for production deployment recommendations
+- Explore [Troubleshooting](Troubleshooting.md) guide for common issues and solutions 

@@ -1,56 +1,71 @@
-# IBM Cloud Pacemaker Plugin Wiki
+# IBM Cloud Pacemaker Plugin
 
-Welcome to the IBM Cloud Pacemaker Plugin wiki! This wiki provides comprehensive documentation for the IBM Cloud Pacemaker Plugin, which enables high-availability cluster management for IBM Cloud VPC resources.
+The IBM Cloud Pacemaker Plugin provides resource agents for managing IBM Cloud VPC resources in a Pacemaker cluster. This plugin enables high availability configurations for IBM Cloud VPC resources using Pacemaker's cluster management capabilities.
 
-## Overview
+## Features
 
-The IBM Cloud Pacemaker Plugin extends Pacemaker's capabilities by adding support for managing IBM Cloud resources in Active-Passive mode. It provides seamless integration between IBM Cloud and the Pacemaker cluster resource manager, allowing you to manage cloud resources and deployment within Pacemaker.
+- Custom Route VIP resource agent for cross-zone high availability
+- Floating IP Failover resource agent for same-zone high availability
+- Integration with IBM Cloud VPC API
+- Support for API key and Trusted Profile IAM authentication
+- Compatible with standard Pacemaker cluster configurations
 
 ## Table of Contents
 
-1. [Getting Started](Getting-Started)
-   - [Prerequisites](Getting-Started#prerequisites)
-   - [Installation Guide](Getting-Started#installation-guide)
-   - [Configuration](Getting-Started#configuration)
+1. [Getting Started](Getting-Started.md)
+   - Installation
+   - Configuration
+   - Basic Usage
 
-2. [Architecture](Architecture)
-   - [System Components](Architecture#system-components)
-   - [High Availability Setup](Architecture#high-availability-setup)
-   - [Resource Types](Architecture#resource-types)
+2. [Architecture](Architecture.md)
+   - System Components
+   - High Availability Setup
+   - Resource Management
 
-3. [Resource Agents](Resource-Agents)
-   - [Custom Route VIP](Resource-Agents#custom-route-vip)
-   - [Floating IP Failover](Resource-Agents#floating-ip-failover)
-   - [Configuration Parameters](Resource-Agents#configuration-parameters)
+3. [Resource Agents](Resource-Agents.md)
+   - Custom Route VIP Agent
+   - Floating IP Failover Agent
+   - Configuration Options
 
-4. [Cluster Configuration](Cluster-Configuration)
-   - [Two-Node Setup](Cluster-Configuration#two-node-setup)
-   - [Three-Node Quorum](Cluster-Configuration#three-node-quorum)
-   - [Corosync Configuration](Cluster-Configuration#corosync-configuration)
+4. [Cluster Configuration](Cluster-Configuration.md)
+   - Two-Node Setup
+   - Three-Node Quorum
+   - Corosync Configuration
 
-5. [Security](Security)
-   - [Authentication Methods](Security#authentication-methods)
-   - [API Key Management](Security#api-key-management)
-   - [Trusted Profile IAM](Security#trusted-profile-iam)
+5. [Security](Security.md)
+   - Authentication Methods
+   - API Key Management
+   - Security Best Practices
 
-6. [Troubleshooting](Troubleshooting)
-   - [Common Issues](Troubleshooting#common-issues)
-   - [Log Analysis](Troubleshooting#log-analysis)
-   - [Debugging Guide](Troubleshooting#debugging-guide)
+6. [Troubleshooting](Troubleshooting.md)
+   - Common Issues
+   - Log Analysis
+   - Recovery Procedures
 
-7. [Best Practices](Best-Practices)
-   - [Production Deployment](Best-Practices#production-deployment)
-   - [Performance Optimization](Best-Practices#performance-optimization)
-   - [Monitoring](Best-Practices#monitoring)
+7. [Best Practices](Best-Practices.md)
+   - Production Deployment
+   - Performance Optimization
+   - Monitoring
 
-8. [API Reference](API-Reference)
-   - [Resource Agent Parameters](API-Reference#resource-agent-parameters)
-   - [Configuration Options](API-Reference#configuration-options)
-   - [Environment Variables](API-Reference#environment-variables)
+8. [API Reference](API-Reference.md)
+   - Resource Agent Parameters
+   - Configuration Options
+   - Examples
+
+9. [Contributing](Contributing.md)
+   - Development Setup
+   - Code Style
+   - Testing
+   - Pull Request Process
+
+10. [Release Notes](Release-Notes.md)
+    - Version History
+    - Migration Guide
+    - Known Issues
 
 ## Quick Links
 
 - [GitHub Repository](https://github.com/gampel/ibm-cloud-pacemaker-plugin)
 - [Issue Tracker](https://github.com/gampel/ibm-cloud-pacemaker-plugin/issues)
-- [Contributing Guide](Contributing)
-- [Release Notes](Release-Notes) 
+- [Contributing Guide](Contributing.md)
+- [Release Notes](Release-Notes.md) 
