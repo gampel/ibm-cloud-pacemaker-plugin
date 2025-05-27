@@ -208,7 +208,31 @@ The proof of concept demonstrates a production-ready implementation combining:
 ### Implementation Details
 
 ### Architecture Overview
+```
+flowchart TD
+    Internet([Internet])
+    PAR([Public Address Range (PAR)])
+    PUBRT["PUBLIC Route Table<br/>Custom route: PAR prefix → Active FW (Pacemaker Node 1)"]
+    FWLayer["Firewall Layer (Active/Passive)"]
+    FW1["Pacemaker Node 1<br/>(au-syd-1)<br/>(Active)<br/>mgmt VNI<br/>data VNI"]
+    FW2["Pacemaker Node 2<br/>(au-syd-2)<br/>(Passive)<br/>mgmt VNI<br/>data VNI"]
+    Quorum["Quorum Device<br/>(au-syd-3)<br/>(Quorum)<br/>mgmt VNI<br/>data VNI<br/>[FIP]"]
+    AppLayer["Application Layer"]
+    Web1["Web App 1<br/>(au-syd-1)<br/>VNI"]
+    Web2["Web App 2<br/>(au-syd-2)<br/>VNI"]
 
+    Internet --> PAR
+    PAR --> PUBRT
+    PUBRT --> FWLayer
+    FWLayer --> FW1
+    FWLayer --> FW2
+    FWLayer --> Quorum
+    FW1 --> AppLayer
+    FW2 --> AppLayer
+    Quorum --> AppLayer
+    AppLayer --> Web1
+    AppLayer --> Web2
+```
 ```
                                     Internet
                                         │
