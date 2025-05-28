@@ -189,6 +189,15 @@ This proof of concept demonstrates a production-ready implementation of public i
    - Load balancing capabilities
    - Health monitoring and recovery
 
+4. **Transit VPC (VPC HUB) Capability**
+   - Can be configured as a central transit VPC for multiple spoke VPCs not cover in this document 
+   - Provides centralized firewall protection for all spoke VPCs
+   - Enables traffic inspection and filtering between VPCs
+   - Supports hub-and-spoke network architecture
+   - Allows for centralized security policy management
+   - Enables cross-VPC traffic control and monitoring
+   - Provides a single point of management for multiple VPCs
+
 ### Architecture Design
 The proof of concept demonstrates a production-ready implementation combining:
 1. **High Availability Layer**
@@ -261,30 +270,26 @@ stop_vsis_after_apply = false
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │                           Firewall Layer (Active/Passive)                    │
 │                                                                              │
-│  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐                       │
-│  │ Pacemaker   │    │ Pacemaker   │    │ Quorum      │                       │
-│  │ Node 1      │    │ Node 2      │    │ Device      │                       │
-│  │ (au-syd-1)  │    │ (au-syd-2)  │    │ (au-syd-3)  │                       │
-│  │  (Active)   │    │ (Passive)   │    │  (Quorum)   │                       │
-│  │  eth0:data  │    │  eth0:data  │    │  eth0:data  │                       │
-│  │  eth1:mgmt  │    │  eth1:mgmt  │    │  eth1:mgmt  │                       │
-│  │             │    │             │    │  [FIP]      │                       │
-│  └──────┬──────┘    └──────┬──────┘    └──────┬──────┘                       │
-│         │                  │                  │                              │
-└─────────┼──────────────────┼──────────────────┼──────────────────────────────┘
-          │                  │                  │
-          ▼                  ▼                  ▼
+│  ┌─────────────────────┐    ┌─────────────────────┐    ┌─────────────────────┐
+│  │ Pacemaker Node 1    │    │ Quorum Device       │    │ Pacemaker Node 2    │
+│  │ (Active)            │◄───┤ (au-syd-3)          │───►│ (Passive)           │
+│  │ au-syd-1            │    │ - eth0: 10.240.2.4  │    │ au-syd-2            │
+│  │ - eth0: 10.240.0.4  │    │ - FIP: 119.81.128.14│    │ - eth0: 10.240.1.4  │
+│  │ - eth1: 10.250.0.4  │    │ - eth1: 10.250.2.4  │    │ - eth1: 10.250.1.4  │
+│  └─────────────────────┘    └─────────────────────┘    └─────────────────────┘
+└──────────────────────────────────────────────────────────────────────────────┘
+                                        │
+                                        ▼
 ┌──────────────────────────────────────────────────────────────────────────────┐
-│                        Application Layer                                    │
+│                        Application Layer                                     │
 │                                                                              │
-│  ┌─────────────┐    ┌─────────────┐                                          │
-│  │ Web App 1   │    │ Web App 2   │                                          │
-│  │ (au-syd-1)  │    │ (au-syd-2)  │                                          │
-│  │  VNI        │    │  VNI        │                                          │
-│  └─────────────┘    └─────────────┘                                          │
+│  ┌─────────────────────┐    ┌─────────────────────┐                          │
+│  │ Web App 1           │    │ Web App 2           │                          │
+│  │ au-syd-1            │    │ au-syd-2            │                          │
+│  │ - 10.240.0.132/25   │    │ - 10.240.1.132/25   │                          │
+│  └─────────────────────┘    └─────────────────────┘                          │
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
-
 Network Configuration:
 - **Data Path (eth0)**
   - Firewall Subnets: 10.240.0.0/25 (AZ1), 10.240.1.0/25 (AZ2)
