@@ -1,10 +1,12 @@
-# IBM Cloud's Public Address Ranges: A Peacemaker Reference Implementation for High Availability
+# IBM Cloud's Public Address Ranges: A Pacemaker Reference Implementation for High Availability
 
 ## Introduction
 
 IBM Cloud's [Public Address Ranges](https://cloud.ibm.com/docs/vpc?topic=vpc-about-par) feature, combined with Pacemaker, serves two important purposes:
 1. A reference implementation for firewall vendors to integrate their solutions with IBM Cloud
 2. A production-ready solution for open-source high availability deployments
+
+> **Note:** This implementation has been tested on RHEL 8. While it may work on other Linux distributions, specific package names and configuration paths might differ.
 
 ## Public Address Ranges Benefits for Customers
 
@@ -78,6 +80,8 @@ Linux High Availability (HA) is a critical component for ensuring continuous ser
 - Resource monitoring and recovery
 - Complex resource dependencies
 - Support for multiple cluster topologies
+
+> **Security Note:** The default hacluster password used in this guide is for demonstration purposes only. In production environments, always use strong, unique passwords and follow security best practices.
 
 For more information about Pacemaker and resource agents, visit the [ClusterLabs GitHub repository](https://github.com/ClusterLabs/resource-agents).
 
@@ -207,6 +211,38 @@ The proof of concept demonstrates a production-ready implementation combining:
 
 ### Implementation Details
 
+### Prerequisites and Configuration
+
+Before running Terraform, you need to configure the `terraform.tfvars` file with your specific IBM Cloud environment details. The following parameters need to be set:
+
+1. **IBM Cloud Configuration**
+   - `region`: Your IBM Cloud region (e.g., "au-syd", "us-south")
+   - `resource_group`: Your IBM Cloud resource group ID
+   - `vpc_name`: Name for your VPC deployment
+   - `zones`: List of availability zones for your region
+
+2. **Infrastructure Settings**
+   - `ssh_key`: Your IBM Cloud SSH key ID for VSI access
+   - `image`: Custom image ID for the VSIs
+   - `profile`: VSI instance profile (e.g., "bx2-2x8")
+   - `ipv4_cidr_block`: CIDR block for your VPC subnet
+
+3. **Optional Settings**
+   - `stop_vsis_after_apply`: Boolean flag to control VSI state after apply
+
+Example configuration:
+```hcl
+region         = "au-syd"
+resource_group = "your-resource-group-id"
+vpc_name       = "your-vpc-name"
+zones          = ["au-syd-1", "au-syd-2", "au-syd-3"]
+ssh_key        = "your-ssh-key-id"
+image          = "your-custom-image-id"
+profile        = "bx2-2x8"
+ipv4_cidr_block = "10.240.0.0/24"
+stop_vsis_after_apply = false
+```
+
 ### Architecture Overview
 
 ```
@@ -230,8 +266,8 @@ The proof of concept demonstrates a production-ready implementation combining:
 │  │ Node 1      │    │ Node 2      │    │ Device      │                       │
 │  │ (au-syd-1)  │    │ (au-syd-2)  │    │ (au-syd-3)  │                       │
 │  │  (Active)   │    │ (Passive)   │    │  (Quorum)   │                       │
-│  │  mgmt VNI   │    │  mgmt VNI   │    │  mgmt VNI   │                       │
-│  │  data VNI   │    │  data VNI   │    │  data VNI   │                       │
+│  │  eth0:data  │    │  eth0:data  │    │  eth0:data  │                       │
+│  │  eth1:mgmt  │    │  eth1:mgmt  │    │  eth1:mgmt  │                       │
 │  │             │    │             │    │  [FIP]      │                       │
 │  └──────┬──────┘    └──────┬──────┘    └──────┬──────┘                       │
 │         │                  │                  │                              │
@@ -250,20 +286,33 @@ The proof of concept demonstrates a production-ready implementation combining:
 ```
 
 Network Configuration:
-- Firewall Subnets: 10.240.0.0/25 (AZ1), 10.240.1.0/25 (AZ2)
-- Quorum Subnet: 10.240.2.0/25 (AZ3)
-- App Subnets: 10.240.0.128/25 (AZ1), 10.240.1.128/25 (AZ2)
-- Management Subnets: 10.250.0.0/24 (AZ1), 10.250.1.0/24 (AZ2), 10.250.2.0/24 (AZ3)
-- Public Address Range (PAR) for external access
-- Custom PUBLIC route table: PAR prefix → Active FW (Pacemaker Node 1)
-- Floating IP on Quorum mgmt VNI
-- Security groups for firewall and application layers
+- **Data Path (eth0)**
+  - Firewall Subnets: 10.240.0.0/25 (AZ1), 10.240.1.0/25 (AZ2)
+  - Quorum Subnet: 10.240.2.0/25 (AZ3)
+  - Floating IP attached to Quorum's eth0 (data interface)
+  - Used for data traffic and PAR VIP
+
+- **Management (eth1)**
+  - Management Subnets: 10.250.0.0/24 (AZ1), 10.250.1.0/24 (AZ2), 10.250.2.0/24 (AZ3)
+  - Used for cluster communication and management
+  - Accessible through Public Gateway
+
+- **Application Layer**
+  - App Subnets: 10.240.0.128/25 (AZ1), 10.240.1.128/25 (AZ2)
+  - Protected by firewall rules
+
+- **Network Features**
+  - Public Address Range (PAR) for external access
+  - Custom PUBLIC route table: PAR prefix → Active FW (Pacemaker Node 1)
+  - Security groups for firewall and application layers
+  - IP spoofing enabled on data interfaces
 
 Traffic Flow:
-- External traffic → PAR → PUBLIC Route Table → Active Pacemaker Node
-- Active Node → NAT → Web Application
-- Failover: Active Node → Passive Node → Web Application
-- Quorum device accessible via Floating IP for management
+- External traffic → PAR → PUBLIC Route Table → Active Pacemaker Node (eth0)
+- Active Node (eth0) → NAT → Web Application
+- Failover: Active Node (eth0) → Passive Node (eth0) → Web Application
+- Management traffic: Public Gateway → eth1 interfaces
+- Quorum device accessible via Floating IP on eth0 for management
 
 ## PoC Deployment and Testing
 
@@ -317,11 +366,14 @@ Traffic Flow:
    QUORUM_FIP="<quorum-device-floating-ip>"
    FW1_MGMT_IP="<firewall-1-management-ip>"
    FW2_MGMT_IP="<firewall-2-management-ip>"
+   WEB_VIP="<web-application-virtual-ip>"  # Virtual IP for web application load balancing
 
    # web_install_params.env
    WEB_APP_1_IP="<web-app-1-ip>"
    WEB_APP_2_IP="<web-app-2-ip>"
    ```
+
+   > **Note:** The `WEB_VIP` is a virtual IP address used for load balancing between the web application nodes. It should be an available IP address in your private subnet.
 
    Access Pattern:
    - Only the Quorum device has a Floating IP (FIP) for management access
@@ -335,127 +387,29 @@ Traffic Flow:
    # First, SSH to the Quorum device
    ssh root@$QUORUM_FIP
    
-  you can use SSH jump host feature to access the fw and web VMs:
-   ```bash
-   # SSH to firewall node 1 through Quorum device
+   # Use SSH jump host feature to access the fw and web VMs
    ssh -A -J root@$QUORUM_FIP root@$FW1_MGMT_IP
    ```
 
-   # Run the installation script, it will copy and execute that script on the two FW nodes 
+   The installation scripts (`install_fw_remote.sh` and `setup-pacemaker.sh`) handle the following tasks:
+   1. Copy necessary files to target nodes
+   2. Configure network settings
+   3. Set up Pacemaker cluster
+   4. Configure high availability
+   5. Set up monitoring and failover
+
    ```bash
    # Make the script executable
    chmod +x install_fw_remote.sh
    
    # Run the installation script with the PAR VIP IP
-   # The script will:
-   # 1. Copy setup-pacemaker.sh to both firewall nodes
-   # 2. Copy web_install_params.env to both firewall nodes
-   # 3. Execute setup-pacemaker.sh on both nodes with the PAR VIP IP
    ./install_fw_remote.sh setup-pacemaker.sh <PAR_VIP_IP>
    ```
 
-   The firewall nodes are responsible for handling the traffic routing and NAT configuration. The setup is done automatically via the installation script (`setup-pacemaker.sh`), which configures the following:
-
-   1. **Network Configuration**:
-      - Sets up NAT for traffic forwarding
-      - Configures port forwarding for web traffic (ports 80 and 443)
-      - Sets the PAR VIP as a secondary IP on eth0
-      - Configures iptables rules for traffic management
-
-   2. **High Availability Setup**:
-      - Installs and configures Pacemaker and Corosync
-      - Sets up the cluster with proper fencing
-      - Configures resource monitoring
-
-   3. **Persistence**:
-      - Saves iptables rules to `/etc/iptables/rules.v4`
-      - Configures `rc.local` to restore rules on boot
-      - Sets up health monitoring via cron
-
-   The following sections explain what the installation script configures on the firewall devices:
-
-   ### Network Configuration
-
-   The script automatically configures:
-
-   1. **NAT and Port Forwarding**:
-      ```bash
-      # Configure NAT
-      echo "net.ipv4.ip_forward=1" >> /etc/sysctl.conf
-      sysctl -p
-
-      # Configure NAT rules
-      iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
-      iptables -A FORWARD -i eth0 -o eth1 -m state --state RELATED,ESTABLISHED -j ACCEPT
-      iptables -A FORWARD -i eth1 -o eth0 -j ACCEPT
-
-      # Configure port forwarding for web traffic
-      iptables -t nat -A PREROUTING -i eth0 -p tcp -d $PAR_VIP_IP --dport 80 -j DNAT --to-destination $WEB_VIP
-      iptables -t nat -A PREROUTING -i eth0 -p tcp -d $PAR_VIP_IP --dport 443 -j DNAT --to-destination $WEB_VIP
-      ```
-
-   2. **Traffic Rules**:
-      ```bash
-      # Allow web traffic in FORWARD chain
-      iptables -A FORWARD -i eth0 -p tcp -d $WEB_VIP --dport 80 -j ACCEPT
-      iptables -A FORWARD -i eth0 -p tcp -d $WEB_VIP --dport 443 -j ACCEPT
-      iptables -A FORWARD -i eth1 -p tcp -d $WEB_VIP --dport 80 -j ACCEPT
-      iptables -A FORWARD -i eth1 -p tcp -d $WEB_VIP --dport 443 -j ACCEPT
-
-      # Allow web traffic in INPUT chain
-      iptables -A INPUT -p tcp --dport 80 -j ACCEPT
-      iptables -A INPUT -p tcp --dport 443 -j ACCEPT
-      ```
-
-   3. **PAR VIP Configuration**:
-      ```bash
-      # Set PAR VIP as source IP for eth0
-      ip addr add $PAR_VIP_IP/32 dev eth0
-      echo "ip addr add $PAR_VIP_IP/32 dev eth0" >> /etc/rc.d/rc.local
-      ```
-
-   ### High Availability Setup
-
-   The script configures:
-
-   1. **Pacemaker and Corosync**:
-      ```bash
-      # Install required packages
-      yum install -y pacemaker pcs corosync fence-agents-all iptables-services
-
-      # Enable and start services
-      systemctl enable --now pcsd
-      systemctl enable --now corosync
-      systemctl enable --now pacemaker
-      ```
- 
-   ### Persistence Configuration
-
-   The script ensures all configurations persist across reboots:
-
-   1. **Iptables Rules**:
-      ```bash
-      # Save iptables rules
-      iptables-save > /etc/iptables/rules.v4
-
-      # Create rc.local if it doesn't exist
-      if [ ! -f /etc/rc.d/rc.local ]; then
-          touch /etc/rc.d/rc.local
-          chmod +x /etc/rc.d/rc.local
-      fi
-
-      # Add iptables restore command to rc.local
-      echo "iptables-restore < /etc/iptables/rules.v4" >> /etc/rc.d/rc.local
-      ```
-
-   2. **Service Persistence**:
-      ```bash
-      # Enable rc.local service
-      systemctl enable rc-local
-      systemctl start rc-local
-      ```
-
-   These configurations are automatically applied when you run the installation script. You don't need to manually configure any of these settings.
+   > **Note:** The Public Address Ranges Plugin is currently in beta. Known limitations include:
+   > - Limited to /28 to /32 prefix sizes
+   > - Requires manual route configuration until Terraform support is available
+   > - Some advanced features may require additional configuration
 
 3. **Web Application Installation**
    ```bash
@@ -690,3 +644,115 @@ pcs node status
 - [Corosync Documentation](https://corosync.github.io/corosync/)
 - [IBM Cloud Public Address Ranges Documentation](https://cloud.ibm.com/docs/vpc?topic=vpc-about-par)
 - [IBM Cloud Fail-over Package](https://pypi.org/project/ibm-cloud-fail-over/1.0.8/) - Python-based abstraction layer for IBM Cloud plugins
+
+## Infrastructure Lifecycle Management
+
+### Starting All Resources
+To start all Virtual Server Instances (VSIs) in your deployment:
+
+```bash
+# List and start all VSIs with the prefix
+ibmcloud is instances --output json | jq -r '.[] | select(.name | startswith("par-poc2")) | .id' | xargs -I {} ibmcloud is instance-start {}
+
+# Verify the status of all VSIs
+ibmcloud is instances --output json | jq -r '.[] | select(.name | startswith("par-poc2")) | "\(.name): \(.status)"'
+```
+
+### Stopping All Resources
+To stop all Virtual Server Instances (VSIs) in your deployment:
+
+```bash
+# List and stop all VSIs with the prefix
+ibmcloud is instances --output json | jq -r '.[] | select(.name | startswith("par-poc2")) | .id' | xargs -I {} ibmcloud is instance-stop {}
+
+# Verify the status of all VSIs
+ibmcloud is instances --output json | jq -r '.[] | select(.name | startswith("par-poc2")) | "\(.name): \(.status)"'
+```
+
+### Destroying All Resources
+To completely remove all resources created by Terraform:
+
+1. First, ensure you're in the correct directory:
+```bash
+cd docs/wiki/PAR\ PoC
+```
+
+2. Run Terraform destroy:
+```bash
+# Review the resources that will be destroyed
+terraform plan -destroy
+
+# Destroy all resources
+terraform destroy
+```
+
+> **Important Notes:**
+> - The `terraform destroy` command will remove ALL resources created by Terraform, including:
+>   - Virtual Server Instances
+>   - VPC and subnets
+>   - Security groups
+>   - Public gateways
+>   - Floating IPs
+>   - Custom routes
+> - This action cannot be undone
+> - Make sure to backup any important data before running destroy
+> - The Public Address Range (PAR) will need to be manually deleted from the IBM Cloud console if it was created manually
+
+### Managing Specific Resources
+To manage specific resources without affecting others:
+
+```bash
+# Start a specific VSI
+ibmcloud is instance-start <instance-id>
+
+# Stop a specific VSI
+ibmcloud is instance-stop <instance-id>
+
+# Get instance ID by name
+ibmcloud is instances --output json | jq -r '.[] | select(.name == "par-poc2-pacemaker-node-1") | .id'
+```
+
+### Monitoring Resource Status
+To monitor the status of your resources:
+
+```bash
+# List all VSIs and their status
+ibmcloud is instances --output json | jq -r '.[] | select(.name | startswith("par-poc2")) | "\(.name): \(.status)"'
+
+# List all subnets
+ibmcloud is subnets --output json | jq -r '.[] | select(.name | startswith("par-poc2")) | "\(.name): \(.ipv4_cidr_block)"'
+
+# List all security groups
+ibmcloud is security-groups --output json | jq -r '.[] | select(.name | startswith("par-poc2")) | "\(.name): \(.id)"'
+```
+
+### Troubleshooting Resource Management
+
+1. **If VSIs fail to start:**
+   ```bash
+   # Check VSI status and errors
+   ibmcloud is instance <instance-id>
+   
+   # Check VSI console logs
+   ibmcloud is instance-console <instance-id>
+   ```
+
+2. **If Terraform destroy fails:**
+   ```bash
+   # Force unlock the Terraform state if needed
+   terraform force-unlock <lock-id>
+   
+   # Remove the Terraform state file and start fresh
+   rm terraform.tfstate
+   ```
+
+3. **If resources are stuck:**
+   ```bash
+   # List all resources with their status
+   ibmcloud is instances --output json | jq -r '.[] | select(.name | startswith("par-poc2")) | "\(.name): \(.status)"'
+   
+   # Check for any pending operations
+   ibmcloud is instance-operations <instance-id>
+   ```
+
+Remember to always verify the status of your resources after performing any management operations to ensure they are in the expected state.
