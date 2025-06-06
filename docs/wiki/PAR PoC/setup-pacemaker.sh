@@ -1,14 +1,6 @@
 #!/bin/bash
-
-# Check if PAR_VIP_IP is provided
-if [ -z "$1" ]; then
-    echo "Usage: $0 <PAR_VIP_IP>"
-    echo "Example: $0 192.168.1.1"
-    exit 1
-fi
-
-PAR_VIP_IP=$1
-
+set +x
+pwd
 # Source environment files if they exist
 if [ -f "fw_install_params.env" ]; then
     source fw_install_params.env
@@ -44,7 +36,7 @@ REPO_RAW_BASE="https://raw.githubusercontent.com/gampel/ibm-cloud-pacemaker-plug
 AGENT_RPM_URL="$REPO_RAW_BASE/deps/resource-agents.src.rpm"
 INSTALL_YUM_URL="$REPO_RAW_BASE/distributions/install.yum"
  
- git clone https://github.com/gampel/ibm-cloud-pacemaker-plugin.git
+git clone https://github.com/gampel/ibm-cloud-pacemaker-plugin.git
 
 cd ibm-cloud-pacemaker-plugin
 
@@ -53,6 +45,7 @@ make install
 systemctl enable --now pcsd
 systemctl enable --now corosync
 systemctl enable --now pacemaker
+systemctl restart corosync
 
 # Set password for hacluster user
 echo "hacluster" | passwd --stdin hacluster
@@ -64,14 +57,45 @@ iptables -P INPUT DROP
 iptables -P FORWARD DROP
 iptables -P OUTPUT ACCEPT
 
+# Create iptables directory if it doesn't exist
+mkdir -p /etc/iptables
+
+sudo iptables -A INPUT  -m state --state RELATED,ESTABLISHED -j ACCEPT
+
+# Allow ICMP (ping and other ICMP types)
+iptables -A INPUT -p icmp --icmp-type echo-request -j ACCEPT
+iptables -A INPUT -p icmp --icmp-type echo-reply -j ACCEPT
+
+
 # Allow SSH
 iptables -A INPUT -p tcp --dport 22 -j ACCEPT
 
 # Allow Pacemaker and Corosync ports
+# Required on all nodes (pcsd Web UI and node-to-node communication)
 iptables -A INPUT -p tcp --dport 2224 -j ACCEPT
+
+# Required on all nodes if the cluster has any Pacemaker Remote nodes
 iptables -A INPUT -p tcp --dport 3121 -j ACCEPT
+
+# Required on the quorum device host when using corosync-qnetd
+iptables -A INPUT -p tcp --dport 5403 -j ACCEPT
+
+# Required on corosync nodes if corosync is configured for multicast UDP
 iptables -A INPUT -p udp --dport 5404 -j ACCEPT
+
+# Required on all corosync nodes
 iptables -A INPUT -p udp --dport 5405 -j ACCEPT
+
+# Required on all nodes if the cluster contains any resources requiring DLM
+iptables -A INPUT -p tcp --dport 21064 -j ACCEPT
+
+# Required for Booth ticket manager in multi-site clusters
+iptables -A INPUT -p tcp --dport 9929 -j ACCEPT
+iptables -A INPUT -p udp --dport 9929 -j ACCEPT
+
+# Allow incoming connections from Pacemaker nodes
+iptables -A INPUT -s $FW1_MGMT_IP -j ACCEPT
+iptables -A INPUT -s $FW2_MGMT_IP -j ACCEPT
 
 # Configure NAT
 echo "net.ipv4.ip_forward=1" >> /etc/sysctl.conf
@@ -119,15 +143,23 @@ systemctl start rc-local
 # Configure hostname based on node type
 if [[ $(hostname) == *"pacemaker-node-1"* ]]; then
     echo "Configuring as Active Node"
+    yum install -y corosync-qdevice
+    yum install -y corosync-qnetd
     # Additional active node specific configurations can be added here
 elif [[ $(hostname) == *"pacemaker-node-2"* ]]; then
     echo "Configuring as Passive Node"
+    yum install -y corosync-qdevice
+    yum install -y corosync-qnetd
     # Additional passive node specific configurations can be added here
 elif [[ $(hostname) == *"quorum-device"* ]]; then
     echo "Configuring as Quorum Device"
+    yum install -y corosync-qdevice
+    yum install -y corosync-qnetd
+    systemctl enable --now corosync-qnetd
     # Additional quorum device specific configurations can be added here
 fi
-
+systemctl restart corosync
+systemctl restart pcsd
 # Create a health check script
 cat > /usr/local/bin/health-check.sh << 'EOF'
 #!/bin/bash

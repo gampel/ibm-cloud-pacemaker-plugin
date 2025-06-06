@@ -136,6 +136,7 @@ IBM Cloud provides several resource agents for Pacemaker integration, available 
    - Support for multiple endpoints
    - Currently in beta and available in the [IBM Cloud fork of resource-agents](https://github.com/gampel/resource-agents/tree/par_ibm_cloud_plugin)
    - Will be pushed to upstream ClusterLabs repository soon
+   - Source code and documentation available at [IBM Cloud Pacemaker Plugin](https://github.com/gampel/ibm-cloud-pacemaker-plugin)
 
 ### Integration Support for NFV Vendors
 The IBM Cloud plugin architecture is designed to help NFV vendors:
@@ -292,13 +293,13 @@ stop_vsis_after_apply = false
 ```
 Network Configuration:
 - **Data Path (eth0)**
-  - Firewall Subnets: 10.240.0.0/25 (AZ1), 10.240.1.0/25 (AZ2)
-  - Quorum Subnet: 10.240.2.0/25 (AZ3)
+  - Firewall Subnets: 10.250.0.0/24 (AZ1), 10.250.1.0/24 (AZ2)
+  - Quorum Subnet: 10.250.2.0/24 (AZ3)
   - Floating IP attached to Quorum's eth0 (data interface)
   - Used for data traffic and PAR VIP
 
 - **Management (eth1)**
-  - Management Subnets: 10.250.0.0/24 (AZ1), 10.250.1.0/24 (AZ2), 10.250.2.0/24 (AZ3)
+  - Management Subnets: 10.240.0.0/25 (AZ1), 10.240.1.0/25 (AZ2), 10.240.2.0/25 (AZ3)
   - Used for cluster communication and management
   - Accessible through Public Gateway
 
@@ -407,8 +408,8 @@ Traffic Flow:
    # Make the script executable
    chmod +x install_fw_remote.sh
    
-   # Run the installation script with the PAR VIP IP
-   ./install_fw_remote.sh setup-pacemaker.sh <PAR_VIP_IP>
+   # Run the installation script it will install the two FW deviecs 
+   ./install_fw_remote.sh setup-pacemaker.sh 
    ```
 
    > **Note:** The Public Address Ranges Plugin is currently in beta. Known limitations include:
@@ -424,10 +425,7 @@ Traffic Flow:
    # SSH to web app 1 through Quorum device
    ssh -A -J root@$QUORUM_FIP root@$WEB_APP_1_IP
    
-   # Copy installation scripts
-   scp install_web_remote.sh setup-web-server.sh root@$WEB_APP_1_IP:~/
-   
-   # Run the installation script
+   # Run the installation script it will take some times as it will install the "Beta" resource-agent plugins from this repo
    chmod +x install_web_remote.sh
    ./install_web_remote.sh setup-web-server.sh
    ```
@@ -459,7 +457,7 @@ This guide demonstrates how to set up a high availability cluster using Pacemake
 #### 3.1 Set up hacluster user
 On both firewall nodes (pacemaker-node-1 and pacemaker-node-2), set the hacluster password:
 ```bash
-echo "hacluster:hacluster" | chpasswd
+echo "hacluster" | passwd --stdin hacluster
 ```
 
 #### 3.2 Start and enable pcsd
@@ -471,13 +469,13 @@ systemctl enable --now pcsd
 #### 3.3 Authenticate nodes
 On pacemaker-node-1:
 ```bash
-pcs auth -u hacluster -p hacluster pacemaker-node-1 pacemaker-node-2
+pcs host auth -u hacluster -p hacluster pacemaker-node-1 pacemaker-node-2
 ```
 
 #### 3.4 Create the cluster
 On pacemaker-node-1:
 ```bash
-pcs cluster setup --name par-cluster pacemaker-node-1 pacemaker-node-2
+pcs cluster setup par-cluster pacemaker-node-1 pacemaker-node-2
 ```
 
 #### 3.5 Start the cluster
@@ -488,34 +486,46 @@ pcs cluster start --all
 
 ### 4. Configure Quorum Device (Required for PAR Implementation)
 
-#### 4.1 Install quorum device package
-On both firewall nodes (pacemaker-node-1 and pacemaker-node-2):
+#### 4.1 On  quorum device 
+ 
 ```bash
-yum install -y corosync-qdevice
-```
+# Source the environment file
+source fw_install_params.env
 
-#### 4.2 Set up quorum device
-On the quorum device node:
-```bash
-yum install -y corosync-qnetd
-systemctl enable --now corosync-qnetd
+# First, SSH to the Quorum device
+ssh root@$QUORUM_FIP
+
+# configures and starts the quorum device model net and configures the device to start on boot.
+pcs qdevice setup model net --enable --start
+
 ```
+ 
 
 #### 4.3 Authenticate quorum device
 On both firewall nodes (pacemaker-node-1 and pacemaker-node-2):
 ```bash
+# Source the environment file
+source fw_install_params.env
+# Use SSH jump host feature to access the fw and web VMs
+ssh -A -J root@$QUORUM_FIP root@$FW1_MGMT_IP
 # Authenticate with the quorum device
-pcs host auth $QUORUM_MGMT_IP
+pcs host auth -u hacluster -p hacluster quorum-device
+
+#do the same on $FW2_MGMT_IP
+ssh -A -J root@$QUORUM_FIP root@$FW1_MGMT_IP
+# Authenticate with the quorum device
+pcs host auth -u hacluster -p hacluster quorum-device
 ```
 
 #### 4.4 Configure quorum device in the cluster
-On both firewall nodes (pacemaker-node-1 and pacemaker-node-2):
+On One  firewall nodes (pacemaker-node-1 and pacemaker-node-2):
 ```bash
-# Generate certificates
-pcs qdevice setup model net --enable --start
-
+# Source the environment file
+source fw_install_params.env
+# Use SSH jump host feature to access the fw and web VMs
+ssh -A -J root@$QUORUM_FIP root@$FW1_MGMT_IP
 # Add the quorum device to the cluster
-pcs quorum device add model net host=$QUORUM_MGMT_IP algorithm=ffsplit
+pcs quorum device add model net host=quorum-device algorithm=ffsplit
 ```
 
 #### 4.5 Verify quorum device status
@@ -530,37 +540,7 @@ pcs quorum device status
 pcs quorum status
 ```
 
-#### 4.6 Managing the quorum device service
-On the quorum device node, you can manage the service with these commands:
-```bash
-# Start the quorum device service
-pcs qdevice start net
-
-# Stop the quorum device service
-pcs qdevice stop net
-
-# Enable the quorum device service
-pcs qdevice enable net
-
-# Disable the quorum device service
-pcs qdevice disable net
-
-# Kill the quorum device service
-pcs qdevice kill net
-```
-
-#### 4.7 Managing quorum device in cluster
-On either firewall node:
-```bash
-# Update quorum device settings
-pcs quorum device update model algorithm=lms
-
-# Remove quorum device
-pcs quorum device remove
-
-# Destroy quorum device (on quorum device node)
-pcs qdevice destroy net
-```
+ 
 
 ### 5. Configure IBM Cloud Public Address Ranges
 
@@ -668,7 +648,7 @@ To stop all Virtual Server Instances (VSIs) in your deployment:
 
 ```bash
 # List and stop all VSIs with the prefix
-ibmcloud is instances --output json | jq -r '.[] | select(.name | startswith("par-poc2")) | .id' | xargs -I {} ibmcloud is instance-stop {}
+ibmcloud is instances --output json | jq -r '.[] | select(.name | startswith("par-poc2")) | .id' | xargs -I {} ibmcloud is instance-stop {} --force
 
 # Verify the status of all VSIs
 ibmcloud is instances --output json | jq -r '.[] | select(.name | startswith("par-poc2")) | "\(.name): \(.status)"'

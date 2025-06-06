@@ -23,6 +23,7 @@ elif [ $# -eq 1 ]; then
   : "${FW2_MGMT_IP:?FW2_MGMT_IP must be set in env file or as argument}"
   FW1_IP="$FW1_MGMT_IP"
   FW2_IP="$FW2_MGMT_IP"
+  QUORUM_IP="$QUORUM_MGMT_IP"
 else
   echo "Usage: $0 [<quorum_fip> <fw1_ip> <fw2_ip>] <install_script>"
   echo "Or:   $0 <install_script> (with fw_install_params.env present)"
@@ -36,16 +37,17 @@ run_fw_install() {
   scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ProxyJump=root@${QUORUM_FIP} \
       "$(dirname "$0")/fw_install_params.env" \
       "$(dirname "$0")/web_install_params.env" \
-      root@${FW_IP}:~/
+      root@${FW_IP}:/root/
   
   # Copy the script using scp with jump host
   scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ProxyJump=root@${QUORUM_FIP} \
       ${INSTALL_SCRIPT} root@${FW_IP}:/tmp/install_remote.sh
   
   # Run the script using ssh with jump host
-  ssh -o StrictHostKeyChecking=no -A -J root@${QUORUM_FIP} root@${FW_IP} 'chmod +x /tmp/install_remote.sh && sudo sh -x /tmp/install_remote.sh'
+  ssh -o StrictHostKeyChecking=no -A -J root@${QUORUM_FIP} root@${FW_IP} 'chmod +x /tmp/install_remote.sh && sudo cd /tmp/ && sudo /tmp/install_remote.sh'
 }
 
 # Run on fw1 and fw2
 run_fw_install "$FW1_IP"
 run_fw_install "$FW2_IP" 
+run_fw_install "$QUORUM_IP"

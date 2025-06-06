@@ -12,6 +12,12 @@ provider "ibm" {
 }
 
 # Variables
+variable "prefix" {
+  description = "Prefix to be added to all resource names"
+  type        = string
+  default     = "par-poc"
+}
+
 variable "region" {
   description = "IBM Cloud region"
   type        = string
@@ -64,16 +70,21 @@ variable "ibmcloud_api_key" {
   sensitive   = true
 }
 
+variable "par_vip_ip" {
+  description = "PAR VIP IP address to be used for the floating IP"
+  type        = string
+}
+
 # VPC and Network Resources
 resource "ibm_is_vpc" "vpc" {
-  name           = var.vpc_name
+  name           = "${var.prefix}-${var.vpc_name}"
   resource_group = var.resource_group
 }
 
 # Create address prefixes for each zone
 resource "ibm_is_vpc_address_prefix" "prefixes" {
   count      = length(var.zones)
-  name       = "prefix-${var.zones[count.index]}"
+  name       = "${var.prefix}-prefix-${var.zones[count.index]}"
   vpc        = ibm_is_vpc.vpc.id
   zone       = var.zones[count.index]
   cidr       = "10.240.${count.index}.0/24"
@@ -83,7 +94,7 @@ resource "ibm_is_vpc_address_prefix" "prefixes" {
 # Create app address prefixes for each zone
 resource "ibm_is_vpc_address_prefix" "app_prefixes" {
   count      = 2  # Only need prefixes for AZ1 and AZ2
-  name       = "app-prefix-${var.zones[count.index]}"
+  name       = "${var.prefix}-app-prefix-${var.zones[count.index]}"
   vpc        = ibm_is_vpc.vpc.id
   zone       = var.zones[count.index]
   cidr       = "10.241.${count.index}.0/24"
@@ -92,14 +103,14 @@ resource "ibm_is_vpc_address_prefix" "app_prefixes" {
 
 # Create Public Gateways for each AZ
 resource "ibm_is_public_gateway" "pgw_az1" {
-  name           = "pgw-az1"
+  name           = "${var.prefix}-pgw-az1"
   vpc            = ibm_is_vpc.vpc.id
   zone           = var.zones[0]
   resource_group = var.resource_group
 }
 
 resource "ibm_is_public_gateway" "pgw_az2" {
-  name           = "pgw-az2"
+  name           = "${var.prefix}-pgw-az2"
   vpc            = ibm_is_vpc.vpc.id
   zone           = var.zones[1]
   resource_group = var.resource_group
@@ -108,7 +119,7 @@ resource "ibm_is_public_gateway" "pgw_az2" {
 # Update firewall subnets to attach to Public Gateways
 resource "ibm_is_subnet" "firewall_subnets" {
   count           = 2  # Only need 2 subnets for Pacemaker nodes
-  name            = "firewall-subnet-${count.index + 1}"
+  name            = "${var.prefix}-firewall-subnet-${count.index + 1}"
   vpc             = ibm_is_vpc.vpc.id
   zone            = var.zones[count.index]
   ipv4_cidr_block = cidrsubnet(ibm_is_vpc_address_prefix.prefixes[count.index].cidr, 1, 0) # first /25
@@ -119,7 +130,7 @@ resource "ibm_is_subnet" "firewall_subnets" {
 # Update app subnets to attach to Public Gateways
 resource "ibm_is_subnet" "app_subnets" {
   count           = 2  # Only need 2 subnets for application servers
-  name            = "app-subnet-${count.index + 1}"
+  name            = "${var.prefix}-app-subnet-${count.index + 1}"
   vpc             = ibm_is_vpc.vpc.id
   zone            = var.zones[count.index]
   ipv4_cidr_block = cidrsubnet(ibm_is_vpc_address_prefix.app_prefixes[count.index].cidr, 1, 0) # first /25
@@ -129,7 +140,7 @@ resource "ibm_is_subnet" "app_subnets" {
 
 # Quorum subnet (first /25 of the third zone's /24)
 resource "ibm_is_subnet" "quorum_subnet" {
-  name            = "quorum-subnet"
+  name            = "${var.prefix}-quorum-subnet"
   vpc             = ibm_is_vpc.vpc.id
   zone            = var.zones[2]
   ipv4_cidr_block = cidrsubnet(ibm_is_vpc_address_prefix.prefixes[2].cidr, 1, 0) # first /25 of third zone
@@ -138,13 +149,13 @@ resource "ibm_is_subnet" "quorum_subnet" {
 
 # Create security groups
 resource "ibm_is_security_group" "firewall_sg" {
-  name           = "firewall-sg"
+  name           = "${var.prefix}-firewall-sg"
   vpc            = ibm_is_vpc.vpc.id
   resource_group = var.resource_group
 }
 
 resource "ibm_is_security_group" "app_sg" {
-  name           = "app-sg"
+  name           = "${var.prefix}-app-sg"
   vpc            = ibm_is_vpc.vpc.id
   resource_group = var.resource_group
 }
@@ -187,7 +198,7 @@ resource "ibm_is_security_group_rule" "app_inbound" {
 # Management address prefixes
 resource "ibm_is_vpc_address_prefix" "mgmt_prefixes" {
   count      = length(var.zones)
-  name       = "mgmt-prefix-${var.zones[count.index]}"
+  name       = "${var.prefix}-mgmt-prefix-${var.zones[count.index]}"
   vpc        = ibm_is_vpc.vpc.id
   zone       = var.zones[count.index]
   cidr       = "10.250.${count.index}.0/24"
@@ -197,7 +208,7 @@ resource "ibm_is_vpc_address_prefix" "mgmt_prefixes" {
 # Management subnets
 resource "ibm_is_subnet" "mgmt_subnets" {
   count           = length(var.zones)
-  name            = "mgmt-subnet-${count.index + 1}"
+  name            = "${var.prefix}-mgmt-subnet-${count.index + 1}"
   vpc             = ibm_is_vpc.vpc.id
   zone            = var.zones[count.index]
   ipv4_cidr_block = ibm_is_vpc_address_prefix.mgmt_prefixes[count.index].cidr
@@ -206,15 +217,15 @@ resource "ibm_is_subnet" "mgmt_subnets" {
 
 # Pacemaker node 1 VNIs
 resource "ibm_is_virtual_network_interface" "pacemaker1_mgmt" {
-  name           = "pacemaker1-mgmt-vni"
+  name           = "${var.prefix}-pacemaker1-mgmt-vni"
   subnet         = ibm_is_subnet.mgmt_subnets[0].id
   resource_group = var.resource_group
   security_groups = [ibm_is_security_group.firewall_sg.id]
 }
 
 # Pacemaker node 1 data interface
-resource "ibm_is_instance_network_interface" "pacemaker1_data" {
-  name              = "pacemaker1-data-nic"
+resource "ibm_is_instance_network_interface" "pacemaker1_mgmt" {
+  name              = "${var.prefix}-pacemaker1-mgmt-nic"
   instance          = ibm_is_instance.pacemaker_node_1.id
   subnet            = ibm_is_subnet.firewall_subnets[0].id
   allow_ip_spoofing = true
@@ -222,7 +233,7 @@ resource "ibm_is_instance_network_interface" "pacemaker1_data" {
 }
 
 resource "ibm_is_instance" "pacemaker_node_1" {
-  name            = "pacemaker-node-1"
+  name            = "${var.prefix}-pacemaker-node-1"
   vpc             = ibm_is_vpc.vpc.id
   zone            = var.zones[0]
   profile         = var.profile
@@ -244,15 +255,15 @@ resource "ibm_is_instance" "pacemaker_node_1" {
 
 # Pacemaker node 2 VNIs
 resource "ibm_is_virtual_network_interface" "pacemaker2_mgmt" {
-  name           = "pacemaker2-mgmt-vni"
+  name           = "${var.prefix}-pacemaker2-mgmt-vni"
   subnet         = ibm_is_subnet.mgmt_subnets[1].id
   resource_group = var.resource_group
   security_groups = [ibm_is_security_group.firewall_sg.id]
 }
 
 # Pacemaker node 2 data interface
-resource "ibm_is_instance_network_interface" "pacemaker2_data" {
-  name              = "pacemaker2-data-nic"
+resource "ibm_is_instance_network_interface" "pacemaker2_mgmt" {
+  name              = "${var.prefix}-pacemaker2-mgmt-nic"
   instance          = ibm_is_instance.pacemaker_node_2.id
   subnet            = ibm_is_subnet.firewall_subnets[1].id
   allow_ip_spoofing = true
@@ -260,7 +271,7 @@ resource "ibm_is_instance_network_interface" "pacemaker2_data" {
 }
 
 resource "ibm_is_instance" "pacemaker_node_2" {
-  name            = "pacemaker-node-2"
+  name            = "${var.prefix}-pacemaker-node-2"
   vpc             = ibm_is_vpc.vpc.id
   zone            = var.zones[1]
   profile         = var.profile
@@ -282,22 +293,23 @@ resource "ibm_is_instance" "pacemaker_node_2" {
 
 # Quorum device VNIs
 resource "ibm_is_virtual_network_interface" "quorum_mgmt" {
-  name           = "quorum-mgmt-vni"
+  name           = "${var.prefix}-quorum-mgmt-vni"
   subnet         = ibm_is_subnet.mgmt_subnets[2].id
   resource_group = var.resource_group
   security_groups = [ibm_is_security_group.firewall_sg.id]
 }
 
 # Quorum device data interface
-resource "ibm_is_instance_network_interface" "quorum_data" {
-  name              = "quorum-data-nic"
+resource "ibm_is_instance_network_interface" "quorum_mgmt" {
+  name              = "${var.prefix}-quorum-mgmt-nic"
   instance          = ibm_is_instance.quorum_device.id
   subnet            = ibm_is_subnet.quorum_subnet.id
+  allow_ip_spoofing = true
   security_groups   = [ibm_is_security_group.firewall_sg.id]
 }
 
 resource "ibm_is_instance" "quorum_device" {
-  name            = "quorum-device"
+  name            = "${var.prefix}-quorum-device"
   vpc             = ibm_is_vpc.vpc.id
   zone            = var.zones[2]
   profile         = var.profile
@@ -317,23 +329,23 @@ resource "ibm_is_instance" "quorum_device" {
   }
 }
 
-
 # Attach a Floating IP to the Quorum device's management interface
 resource "ibm_is_floating_ip" "quorum_mgmt_fip" {
-  name   = "quorum-mgmt-fip"
-  target = ibm_is_instance.quorum_device.primary_network_interface[0].id
+  name           = "${var.prefix}-quorum-mgmt-fip"
+  target         = ibm_is_instance.quorum_device.primary_network_interface[0].id
+  resource_group = var.resource_group
 }
 
 # Web application 1 VNI
 resource "ibm_is_virtual_network_interface" "web_app_1_vni" {
-  name           = "web-app-1-vni"
+  name           = "${var.prefix}-web-app-1-vni"
   subnet         = ibm_is_subnet.app_subnets[0].id
   resource_group = var.resource_group
   security_groups = [ibm_is_security_group.app_sg.id]
 }
 
 resource "ibm_is_instance" "web_app_1" {
-  name            = "web-app-1"
+  name            = "${var.prefix}-web-app-1"
   vpc             = ibm_is_vpc.vpc.id
   zone            = var.zones[0]
   profile         = var.profile
@@ -355,14 +367,14 @@ resource "ibm_is_instance" "web_app_1" {
 
 # Web application 2 VNI
 resource "ibm_is_virtual_network_interface" "web_app_2_vni" {
-  name           = "web-app-2-vni"
+  name           = "${var.prefix}-web-app-2-vni"
   subnet         = ibm_is_subnet.app_subnets[1].id
   resource_group = var.resource_group
   security_groups = [ibm_is_security_group.app_sg.id]
 }
 
 resource "ibm_is_instance" "web_app_2" {
-  name            = "web-app-2"
+  name            = "${var.prefix}-web-app-2"
   vpc             = ibm_is_vpc.vpc.id
   zone            = var.zones[1]
   profile         = var.profile
@@ -381,11 +393,10 @@ resource "ibm_is_instance" "web_app_2" {
     # }
   }
 }
- 
 
 # Create a new routing table for ingress with public internet ingress enabled
 resource "ibm_is_vpc_routing_table" "ingress" {
-  name           = "ingress-table"
+  name           = "${var.prefix}-ingress-table"
   vpc            = ibm_is_vpc.vpc.id
   route_internet_ingress = true
 }
@@ -397,8 +408,6 @@ data "ibm_resource_group" "rg" {
 # Add a shell wrapper script for create_par.py
 # File: docs/wiki/PAR PoC/run_create_par.sh
 # Usage: ./run_create_par.sh <VPC_ID> <RG_ID> <NAME> <ZONE>
-
-
 
 #resource "null_resource" "create_par" {
 #  provisioner "local-exec" {
@@ -419,7 +428,7 @@ resource "ibm_is_vpc_routing_table_route" "ingress_par_to_fw" {
   vpc            = ibm_is_vpc.vpc.id
   routing_table  = ibm_is_vpc_routing_table.ingress.routing_table
   destination    = "0.0.0.0/0"
-  next_hop       = ibm_is_instance_network_interface.pacemaker1_data.primary_ip[0].address
+  next_hop       = ibm_is_instance.pacemaker_node_1.primary_network_interface[0].primary_ip[0].address
   action         = "deliver"
   name           = "ingress-par-to-fw"
   zone           = var.zones[0]
@@ -429,7 +438,6 @@ resource "ibm_is_vpc_routing_table_route" "ingress_par_to_fw" {
 output "par_prefix" {
   value = ibm_is_vpc_address_prefix.prefixes[0].cidr
 }
- 
 
 output "pacemaker_node_ips" {
   value = {
@@ -472,6 +480,7 @@ QUORUM_FIP="${ibm_is_floating_ip.quorum_mgmt_fip.address}"
 FW1_MGMT_IP="${ibm_is_instance.pacemaker_node_1.primary_network_interface[0].primary_ip[0].address}"
 FW2_MGMT_IP="${ibm_is_instance.pacemaker_node_2.primary_network_interface[0].primary_ip[0].address}"
 QUORUM_MGMT_IP="${ibm_is_instance.quorum_device.primary_network_interface[0].primary_ip[0].address}"
+PAR_VIP_IP="${var.par_vip_ip}"
 EOT
   filename = "${path.module}/fw_install_params.env"
 }
@@ -483,6 +492,7 @@ WEB_APP_1_IP="${ibm_is_instance.web_app_1.primary_network_interface[0].primary_i
 WEB_APP_2_IP="${ibm_is_instance.web_app_2.primary_network_interface[0].primary_ip[0].address}"
 QUORUM_FIP="${ibm_is_floating_ip.quorum_mgmt_fip.address}"
 QUORUM_MGMT_IP="${ibm_is_instance.quorum_device.primary_network_interface[0].primary_ip[0].address}"
+PAR_VIP_IP="${var.par_vip_ip}"
 EOT
   filename = "${path.module}/web_install_params.env"
 } 
